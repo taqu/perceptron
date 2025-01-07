@@ -330,7 +330,7 @@ Tensor mul(const Tensor& input, const Tensor& weight)
         for(u32 i = 0; i < weight.dim(0); ++i) {
             const f32* w = weight.begin2(i);
             f32 r = 0.0f;
-            for(u32 j = 0; j < input.dim(0); ++j) {
+            for(u32 j = 0; j < input.dim(1); ++j) {
                 r += in[j] * w[j];
             }
             ret[i] = r;
@@ -350,8 +350,45 @@ Tensor mul(const Tensor& input, const Tensor& weight, const Tensor& bias)
         for(u32 i = 0; i < weight.dim(0); ++i) {
             const f32* w = weight.begin2(i);
             f32 r = 0.0f;
-            for(u32 j = 0; j < input.dim(0); ++j) {
+            for(u32 j = 0; j < input.dim(1); ++j) {
                 r += in[j] * w[j];
+            }
+            ret[i] = r + bias(i);
+        }
+    }
+    return result;
+}
+
+Tensor mul_transpose(const Tensor& input, const Tensor& weight)
+{
+    assert(input.dim(1) == weight.dim(0));
+    Tensor result({input.dim(0), weight.dim(1)});
+    for(u32 b = 0; b < input.dim(0); ++b) {
+        const f32* in = input.begin2(b);
+        f32* ret = result.begin2(b);
+        for(u32 i = 0; i < weight.dim(1); ++i) {
+            f32 r = 0.0f;
+            for(u32 j = 0; j < input.dim(1); ++j) {
+                r += in[j] * weight(j,i);
+            }
+            ret[i] = r;
+        }
+    }
+    return result;
+}
+
+Tensor mul_transpose(const Tensor& input, const Tensor& weight, const Tensor& bias)
+{
+    assert(input.dim(1) == weight.dim(0));
+    assert(weight.dim(1) == bias.dim(0));
+    Tensor result({input.dim(0), weight.dim(1)});
+    for(u32 b = 0; b < input.dim(0); ++b) {
+        const f32* in = input.begin2(b);
+        f32* ret = result.begin2(b);
+        for(u32 i = 0; i < weight.dim(1); ++i) {
+            f32 r = 0.0f;
+            for(u32 j = 0; j < input.dim(1); ++j) {
+                r += in[j] * weight(j,i);
             }
             ret[i] = r + bias(i);
         }
@@ -495,220 +532,6 @@ Tensor back_softmax(const Tensor& x)
     return x;
 }
 
-//--- TensorT
-//-----------------------------------------------------
-TensorT::TensorT()
-    : tensor_(nullptr)
-    ,dims_{}
-    ,cache_{}
-{
-}
-
-TensorT::TensorT(const Tensor* tensor)
-    :tensor_(tensor)
-{
-    assert(nullptr != tensor_);
-    assert(1 < tensor_->ndims() && tensor_->ndims() < 4);
-    dims_[0] = tensor_->dims_[0];
-    if(2 == tensor_->ndims()) {
-        dims_[1] = tensor_->dims_[1];
-    } else if(3 == tensor_->ndims()) {
-        dims_[2] = tensor_->dims_[2];
-        dims_[1] = tensor_->dims_[1];
-    }
-    dims_[3] = 0;
-    cache_[0] = dims_[1]*dims_[2];
-    cache_[1] = dims_[1]*dims_[2]*dims_[3];
-    cache_[2] = dims_[2]*dims_[3];
-}
-
-TensorT::TensorT(TensorT&& other)
-    : tensor_(other.tensor_)
-{
-    ::memcpy(dims_, other.dims_, sizeof(u32) * 4);
-    ::memcpy(cache_, other.cache_, sizeof(u32) * 3);
-
-    other.tensor_ = nullptr;
-    ::memset(other.dims_, 0, sizeof(u32) * 4);
-    ::memset(other.cache_, 0, sizeof(u32) * 3);
-}
-
-TensorT& TensorT::operator=(TensorT&& other)
-{
-    if(this != &other) {
-        tensor_ = other.tensor_;
-        ::memcpy(dims_, other.dims_, sizeof(u32) * 4);
-        ::memcpy(cache_, other.cache_, sizeof(u32) * 3);
-
-        other.tensor_ = nullptr;
-        ::memset(other.dims_, 0, sizeof(u32) * 4);
-        ::memset(other.cache_, 0, sizeof(u32) * 3);
-    }
-    return *this;
-}
-
-TensorT::TensorT(const TensorT& other)
-    : tensor_(other.tensor_)
-{
-    ::memcpy(dims_, other.dims_, sizeof(u32) * 4);
-    ::memcpy(cache_, other.cache_, sizeof(u32) * 3);
-}
-
-TensorT& TensorT::operator=(const TensorT& other)
-{
-    if(this != &other) {
-        tensor_ = other.tensor_;
-        ::memcpy(dims_, other.dims_, sizeof(u32) * 4);
-        ::memcpy(cache_, other.cache_, sizeof(u32) * 3);
-    }
-    return *this;
-}
-
-TensorT::~TensorT()
-{
-    tensor_ = nullptr;
-}
-
-u32 TensorT::ndims() const
-{
-    return tensor_->ndims_;
-}
-
-u32 TensorT::dim(u32 d) const
-{
-    return dims_[d];
-}
-
-u32 TensorT::total() const
-{
-    u32 p = dims_[0];
-    for(u32 i = 1; i < tensor_->ndims_; ++i) {
-        p *= dims_[i];
-    }
-    return p;
-}
-
-f32 TensorT::operator[](u32 x0) const
-{
-    return tensor_->data_[x0];
-}
-
-f32 TensorT::operator()(u32 x0) const
-{
-    assert(tensor_->ndims() == 1);
-    assert(x0 < dims_[0]);
-    return tensor_->data_[x0];
-}
-
-f32 TensorT::operator()(u32 x0, u32 x1) const
-{
-    assert(tensor_->ndims() == 2);
-    assert(x0 < dims_[0]);
-    assert(x1 < dims_[1]);
-    return tensor_->data_[x0 * dims_[1] + x1];
-}
-
-f32 TensorT::operator()(u32 x0, u32 x1, u32 x2) const
-{
-    assert(tensor_->ndims() == 3);
-    assert(x0 < dims_[0]);
-    assert(x1 < dims_[1]);
-    assert(x2 < dims_[2]);
-    return tensor_->data_[x0 * cache_[0] + x1 * dims_[2] + x2];
-}
-
-f32 TensorT::operator()(u32 x0, u32 x1, u32 x2, u32 x3) const
-{
-    assert(tensor_->ndims() == 4);
-    assert(x0 < dims_[0]);
-    assert(x1 < dims_[1]);
-    assert(x2 < dims_[2]);
-    assert(x3 < dims_[3]);
-    return tensor_->data_[x0 * cache_[1] + x1 * cache_[2] + x2 * dims_[2] + x3];
-}
-
-void print1(const TensorT& x)
-{
-    printf("|");
-    for(u32 i = 0; i < x.dim(0); ++i) {
-        printf("%f, ", x(i));
-    }
-    printf("|\n");
-}
-
-void print2(const TensorT& x)
-{
-    for(u32 i = 0; i < x.dim(0); ++i) {
-        printf("[%d] |", i);
-        for(u32 j = 0; j < x.dim(1); ++j) {
-            printf("%f, ", x(i, j));
-        }
-        printf("|\n");
-    }
-}
-
-void print3(const TensorT& x)
-{
-    for(u32 i = 0; i < x.dim(0); ++i) {
-        printf("[%d]\n", i);
-        for(u32 j = 0; j < x.dim(1); ++j) {
-            printf(" |");
-            for(u32 k = 0; k < x.dim(2); ++k) {
-                printf("%f, ", x(i,j,k));
-            }
-            printf("|\n");
-        }
-    }
-}
-
-Tensor mul(const TensorT& x0, const TensorT& x1)
-{
-    assert(x0.dim(1) == x1.dim(1));
-    Tensor result({x0.dim(0), x1.dim(0)});
-    for(u32 b = 0; b < x0.dim(0); ++b) {
-        for(u32 i = 0; i < x1.dim(0); ++i) {
-            f32 r = 0.0f;
-            for(u32 j = 0; j < x0.dim(0); ++j) {
-                r += x0(b,j) * x1(i,j);
-            }
-            result(b,i) = r;
-        }
-    }
-    return result;
-}
-
-Tensor mul(const Tensor& x0, const TensorT& x1)
-{
-    assert(x0.dim(1) == x1.dim(1));
-    Tensor result({x0.dim(0), x1.dim(0)});
-    for(u32 b = 0; b < x0.dim(0); ++b) {
-        for(u32 i = 0; i < x1.dim(0); ++i) {
-            f32 r = 0.0f;
-            for(u32 j = 0; j < x0.dim(0); ++j) {
-                r += x0(b,j) * x1(i,j);
-            }
-            result(b,i) = r;
-        }
-    }
-    return result;
-}
-
-Tensor mul(const TensorT& x0, const Tensor& x1)
-{
-    assert(x0.dim(1) == x1.dim(1));
-    Tensor result({x0.dim(0), x1.dim(0)});
-    for(u32 b = 0; b < x0.dim(0); ++b) {
-        for(u32 i = 0; i < x1.dim(0); ++i) {
-            f32 r = 0.0f;
-            for(u32 j = 0; j < x0.dim(0); ++j) {
-                r += x0(b,j) * x1(i,j);
-            }
-            result(b,i) = r;
-        }
-    }
-    return result;
-}
-
 //--- Relu
 //-----------------------------------------------------
 Relu::Relu()
@@ -831,10 +654,7 @@ Tensor Affine::forward(const Tensor& x)
 Tensor Affine::backward(const Tensor& x)
 {
     assert(2 == x.ndims());
-    TensorT wt(&weight_);
-    assert(x.dim(1) == wt.dim(1));
-    Tensor r = mul(x, wt);
-    return r;
+    return mul_transpose(x, weight_);
 }
 
 f32 Affine::weight(u32 x0, u32 x1) const

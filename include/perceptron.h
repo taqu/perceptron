@@ -218,6 +218,10 @@ void print3(const Tensor& x);
 
 Tensor mul(const Tensor& input, const Tensor& weight);
 Tensor mul(const Tensor& input, const Tensor& weight, const Tensor& bias);
+
+Tensor mul_transpose(const Tensor& input, const Tensor& weight);
+Tensor mul_transpose(const Tensor& input, const Tensor& weight, const Tensor& bias);
+
 void step(Tensor& x);
 void sigmoid(Tensor& x);
 void ReLU(Tensor& x);
@@ -592,44 +596,6 @@ bool same_shape(const TTensor<T>& x0, const TTensor<U>& x1)
     }
     return true;
 }
-
-//--- TensorT
-//-----------------------------------------------------
-class TensorT
-{
-public:
-    TensorT();
-    explicit TensorT(const Tensor* tensor);
-    TensorT(TensorT&& other);
-    TensorT& operator=(TensorT&& other);
-    TensorT(const TensorT& other);
-    TensorT& operator=(const TensorT& other);
-    ~TensorT();
-    u32 ndims() const;
-    u32 dim(u32 d) const;
-    u32 total() const;
-    f32 operator[](u32 x0) const;
-
-    f32 operator()(u32 x0) const;
-
-    f32 operator()(u32 x0, u32 x1) const;
-
-    f32 operator()(u32 x0, u32 x1, u32 x2) const;
-
-    f32 operator()(u32 x0, u32 x1, u32 x2, u32 x3) const;
-
-private:
-    const Tensor* tensor_;
-    u32 dims_[4];
-    u32 cache_[3];
-};
-
-void print1(const TensorT& x);
-void print2(const TensorT& x);
-void print3(const TensorT& x);
-Tensor mul(const TensorT& x0, const TensorT& x1);
-Tensor mul(const Tensor& x0, const TensorT& x1);
-Tensor mul(const TensorT& x0, const Tensor& x1);
 
 enum class Activation
 {
