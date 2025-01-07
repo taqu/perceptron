@@ -63,9 +63,9 @@ TEST_CASE("Primitive Functions" "[Primitive]")
     }
 
     SECTION("mul"){
-        Tensor X({2});
-        X(0) = 1.0f;
-        X(1) = 2.0f;
+        Tensor X({1,2});
+        X(0,0) = 1.0f;
+        X(0,1) = 2.0f;
 
         Tensor W({3,2});
         W(0,0) = 1.0f;
@@ -76,16 +76,16 @@ TEST_CASE("Primitive Functions" "[Primitive]")
         W(2,1) = 6.0f;
 
         Tensor Y = mul(X, W);
-        print1(Y);
-        EQ_FLOAT(Y(0), 5.0f);
-        EQ_FLOAT(Y(1), 11.0f);
-        EQ_FLOAT(Y(2), 17.0f);
+        print2(Y);
+        EQ_FLOAT(Y(0,0), 5.0f);
+        EQ_FLOAT(Y(0,1), 11.0f);
+        EQ_FLOAT(Y(0,2), 17.0f);
     }
 
     SECTION("mul bias"){
-        Tensor X({2});
-        X(0) = 1.0f;
-        X(1) = 2.0f;
+        Tensor X({1,2});
+        X(0,0) = 1.0f;
+        X(0,1) = 2.0f;
 
         Tensor W({3,2});
         W(0,0) = 1.0f;
@@ -101,17 +101,37 @@ TEST_CASE("Primitive Functions" "[Primitive]")
         B(2) = 3.0f;
 
         Tensor Y = mul(X, W, B);
-        print1(Y);
-        EQ_FLOAT(Y(0), 6.0f);
-        EQ_FLOAT(Y(1), 13.0f);
-        EQ_FLOAT(Y(2), 20.0f);
+        print2(Y);
+        EQ_FLOAT(Y(0,0), 6.0f);
+        EQ_FLOAT(Y(0,1), 13.0f);
+        EQ_FLOAT(Y(0,2), 20.0f);
+    }
+
+    SECTION("mul transpose"){
+        Tensor X({1,3});
+        X(0,0) = 1.0f;
+        X(0,1) = 2.0f;
+        X(0,2) = 3.0f;
+
+        Tensor W({3,2});
+        W(0,0) = 1.0f;
+        W(0,1) = 2.0f;
+        W(1,0) = 3.0f;
+        W(1,1) = 4.0f;
+        W(2,0) = 5.0f;
+        W(2,1) = 6.0f;
+
+        Tensor Y = mul_transpose(X, W);
+        print2(Y);
+        EQ_FLOAT(Y(0,0), 22.0f);
+        EQ_FLOAT(Y(0,1), 28.0f);
     }
 
     SECTION("softmax"){
         Tensor tensor({1, 3});
-        tensor(0, 0) = 0.3f;
-        tensor(0, 1) = 2.9f;
-        tensor(0, 2) = 4.0f;
+        tensor(0,0) = 0.3f;
+        tensor(0,1) = 2.9f;
+        tensor(0,2) = 4.0f;
         softmax(tensor);
         print2(tensor);
         EQ_FLOAT(tensor(0,0), 0.01821127f);
@@ -120,7 +140,7 @@ TEST_CASE("Primitive Functions" "[Primitive]")
     }
 
     SECTION("mean squared error"){
-        Tensor Y({1, 10});
+        Tensor Y({1,10});
         Y(0,0) = 0.1f;
         Y(0,1) = 0.05f;
         Y(0,2) = 0.6f;
@@ -132,7 +152,7 @@ TEST_CASE("Primitive Functions" "[Primitive]")
         Y(0,8) = 0.0f;
         Y(0,9) = 0.0f;
 
-        Tensor T({1, 10});
+        Tensor T({1,10});
         T(0,0) = 0.0f;
         T(0,1) = 0.0f;
         T(0,2) = 1.0f;
@@ -150,7 +170,7 @@ TEST_CASE("Primitive Functions" "[Primitive]")
     }
 
     SECTION("cross entropy error"){
-        Tensor Y({1, 10});
+        Tensor Y({1,10});
         Y(0,0) = 0.1f;
         Y(0,1) = 0.05f;
         Y(0,2) = 0.6f;
@@ -162,7 +182,7 @@ TEST_CASE("Primitive Functions" "[Primitive]")
         Y(0,8) = 0.0f;
         Y(0,9) = 0.0f;
 
-        Tensor T({1, 10});
+        Tensor T({1,10});
         T(0,0) = 0.0f;
         T(0,1) = 0.0f;
         T(0,2) = 1.0f;
