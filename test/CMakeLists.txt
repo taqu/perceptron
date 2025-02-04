@@ -21,14 +21,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}")
 add_executable(${PROJECT_NAME} ${FILES})
 
 if(MSVC)
-    set(DEFAULT_CXX_FLAGS "/DWIN32 /D_WINDOWS /D_MBCS /W4 /WX- /nologo /fp:precise /Zc:wchar_t /TP /Gd")
+    set(DEFAULT_CXX_FLAGS "/DWIN32 /D_WINDOWS /D_MBCS /W4 /WX- /nologo /fp:precise /Zc:wchar_t /TP /Gd /std:c++20 /std:c11")
 
     if("1800" VERSION_LESS MSVC_VERSION)
         set(DEFAULT_CXX_FLAGS "${DEFAULT_CXX_FLAGS} /EHsc")
     endif()
 
-    set(DEFAULT_CXX_FLAGS_DEBUG "/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1 /Gy /GR- /GS /Gm-")
-    set(DEFAULT_CXX_FLAGS_RELEASE "/MT /O2 /GL /GR- /DNDEBUG")
+    set(DEFAULT_CXX_FLAGS_DEBUG "/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1 /Gy /GR- /GS /Gm- /EHsc")
+    set(DEFAULT_CXX_FLAGS_RELEASE "/MT /O2 /GL /GR- /DNDEBUG /EHsc-")
     set(DEFAULT_CXX_LINK_FLAGS_DEBUG "")
     set(DEFAULT_CXX_LINK_FLAGS_RELEASE "/LTCG")
 
@@ -41,7 +41,7 @@ if(MSVC)
     target_link_libraries(${PROJECT_NAME} MIMALLOC)
 
 elseif(UNIX)
-    set(DEFAULT_CXX_FLAGS "-Wall -O2 -std=c++11")
+    set(DEFAULT_CXX_FLAGS "-Wall -O2 -std=c++20 -std=gnu++20 -march=x86-64-v3 -fno-exceptions")
     set(CMAKE_CXX_FLAGS "${DEFAULT_CXX_FLAGS}")
     target_link_libraries(${PROJECT_NAME} MIMALLOC)
 elseif(APPLE)

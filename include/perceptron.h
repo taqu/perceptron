@@ -1,8 +1,9 @@
 #include <cassert>
 #include <cstdint>
 #include <mimalloc.h>
-#include <random>
 #include <type_traits>
+#include <bit>
+#include <functional>
 
 namespace perceptron
 {
@@ -13,6 +14,7 @@ using s32 = int32_t;
 using u8 = uint8_t;
 using u16 = uint16_t;
 using u32 = uint32_t;
+using u64 = uint64_t;
 
 using f32 = float;
 
@@ -24,6 +26,112 @@ using f32 = float;
 #    define PERC_FREE(ptr) ::mi_free(ptr)
 #endif
 
+namespace rand_impl
+{
+    template<class T>
+    float frandom_downey_opt32(T& random)
+    {
+        constexpr int32_t lowExp = 0;
+        constexpr int32_t highExp = 127;
+        const uint32_t u = random.rand();
+        const uint32_t b = u & 0xFFU;
+        int32_t exponent = highExp - 1;
+        if(0 == b) {
+            exponent -= 8;
+            while(true) {
+                const uint32_t bits = random.rand();
+                if(0 == bits) {
+                    exponent -= 32;
+                    if(exponent < lowExp) {
+                        exponent = lowExp;
+                        break;
+                    }
+                } else {
+                    int32_t c = std::countr_zero(bits);
+                    exponent -= c;
+                    break;
+                }
+            }
+        } else {
+            int32_t c = std::countr_zero(b);
+            exponent -= c;
+        }
+        const uint32_t mantissa = (u >> 8) & 0x7FFFFFUL;
+        if(0 == mantissa && (u >> 31)) {
+            ++exponent;
+        }
+        return std::bit_cast<float, uint32_t>((exponent << 23) | mantissa);
+    }
+
+    template<class T>
+    uint32_t range(T& r, uint32_t maxx)
+    {
+        uint32_t t = (-maxx) % maxx;
+        uint64_t m;
+        uint32_t l;
+        do {
+            uint32_t x = r.rand();
+            m = uint64_t(x) * uint64_t(maxx);
+            l = uint32_t(m);
+        } while(l < t);
+        return m >> 32;
+    }
+} // namespace rand_impl
+
+//--- RandomPCG32
+//-----------------------------------------------------------------
+class RandomPCG32
+{
+public:
+    inline static constexpr uint64_t Multiplier = 6364136223846793005ULL;
+    inline static constexpr uint64_t Increment = 1442695040888963407ULL;
+
+    RandomPCG32();
+    explicit RandomPCG32(uint32_t x);
+    ~RandomPCG32();
+
+    void srand(uint32_t x);
+    void srand(uint64_t x);
+    uint32_t rand();
+    uint32_t range(uint32_t maxx);
+    float frand();
+
+    uint32_t operator()()
+    {
+        return rand();
+    }
+private:
+    uint64_t state_;
+};
+
+//--- RandomPCG32_128
+//-----------------------------------------------------------------
+class RandomPCG32_128
+{
+public:
+    RandomPCG32_128();
+    RandomPCG32_128(uint32_t x0, uint32_t x1);
+    ~RandomPCG32_128();
+
+    void srand(uint32_t x0, uint32_t x1);
+    void srand(uint64_t x0, uint64_t x1);
+    uint32_t rand();
+    uint32_t range(uint32_t maxx);
+    float frand();
+
+    uint32_t operator()()
+    {
+        return rand();
+    }
+private:
+    RandomPCG32 state0_;
+    RandomPCG32 state1_;
+    uint32_t x1_;
+};
+
+//--- Distribution
+//-----------------------------------------------------------------
+
 //--- System
 //-----------------------------------------------------
 class System
@@ -33,7 +141,7 @@ public:
     static void initialize();
     static void terminate();
 
-    std::mt19937& getRand();
+    RandomPCG32_128& getRand();
 
 private:
     System(const System&) = delete;
@@ -41,7 +149,7 @@ private:
     System();
     ~System();
     static System instance_;
-    std::mt19937 engine_;
+    RandomPCG32_128 engine_;
 };
 
 //--- Array
@@ -168,6 +276,7 @@ class Tensor
 public:
     Tensor();
     Tensor(std::initializer_list<u32> dims);
+    Tensor(u32 ndims, const u32 dims[4]);
     Tensor(Tensor&& other);
     Tensor& operator=(Tensor&& other);
     Tensor(const Tensor& other);
@@ -206,7 +315,6 @@ public:
     f32* begin4(u32 x0, u32 x1, u32 x2);
 
 private:
-    friend class TensorT;
     u32 ndims_;
     u32 dims_[4];
     f32* data_;
@@ -222,6 +330,12 @@ Tensor mul(const Tensor& input, const Tensor& weight, const Tensor& bias);
 Tensor mul_transpose(const Tensor& input, const Tensor& weight);
 Tensor mul_transpose(const Tensor& input, const Tensor& weight, const Tensor& bias);
 
+Tensor transpose_mul(const Tensor& input, const Tensor& weight);
+
+Tensor batch_sum(const Tensor& tensor);
+Tensor batch_sub(const Tensor& x0, const Tensor& x1);
+void batch_mul(Tensor& tensor, f32 x);
+
 void step(Tensor& x);
 void sigmoid(Tensor& x);
 void ReLU(Tensor& x);
@@ -233,15 +347,7 @@ Tensor back_sigmoid(const Tensor& x, const Tensor& last);
 Tensor back_ReLU(const Tensor& x, const Tensor& last);
 Tensor back_softmax(const Tensor& x);
 
-template<class T>
-void random(Tensor& x, f32 sigma, T& engine)
-{
-    std::normal_distribution<float> dist(0.0f, sigma);
-    u32 total = x.total();
-    for(u32 i = 0; i < total; ++i) {
-        x[i] = dist(engine);
-    }
-}
+Tensor numerical_gradient(std::function<f32(const Tensor&,const Tensor&)> f, const Tensor&x, const Tensor& t);
 
 template<class T>
 class TTensor
@@ -325,7 +431,6 @@ TTensor<T>::TTensor(TTensor&& other)
 {
     ::memcpy(dims_, other.dims_, sizeof(u32) * 4);
 
-    other.ndims_ = 0;
     other.ndims_ = 0;
     ::memset(other.dims_, 0, sizeof(u32) * 4);
     other.data_ = nullptr;
@@ -555,6 +660,7 @@ T* TTensor<T>::begin4(u32 x0, u32 x1, u32 x2)
 }
 
 bool same_shape(const Tensor& x0, const Tensor& x1);
+
 template<class T>
 bool same_shape(const TTensor<T>& x0, const Tensor& x1)
 {
@@ -597,13 +703,44 @@ bool same_shape(const TTensor<T>& x0, const TTensor<U>& x1)
     return true;
 }
 
-enum class Activation
+//--- TensorMask
+//-----------------------------------------------------
+class TensorMask
 {
-    Sigmoid,
-    ReLU,
-    Softmax,
-    None,
+public:
+    TensorMask();
+    TensorMask(std::initializer_list<u32> dims);
+    TensorMask(TensorMask&& other);
+    TensorMask& operator=(TensorMask&& other);
+    TensorMask(const TensorMask& other);
+    TensorMask& operator=(const TensorMask& other);
+    ~TensorMask();
+    void reshape(u32 ndims, const u32 dims[4]);
+
+    u32 ndims() const;
+    u32 dim(u32 d) const;
+    const u32* dims() const;
+    u32 total() const;
+    bool operator[](u32 x0) const;
+    bool operator()(u32 x0) const;
+    bool operator()(u32 x0, u32 x1) const;
+    bool operator()(u32 x0, u32 x1, u32 x2) const;
+    bool operator()(u32 x0, u32 x1, u32 x2, u32 x3) const;
+
+    void set_linear(u32 x, bool b);
+    void set_linear(u32 x);
+    void reset_linear(u32 x);
+private:
+    u32 ndims_;
+    u32 dims_[4];
+    u32* data_;
 };
+
+bool same_shape(const TensorMask& x0, const TensorMask& x1);
+
+bool same_shape(const TensorMask& x0, const Tensor& x1);
+
+bool same_shape(const Tensor& x0, const TensorMask& x1);
 
 //--- ILayer
 //-----------------------------------------------------
@@ -614,7 +751,7 @@ public:
     virtual u32 dim(u32 /*index*/) const { return 0;}
     virtual Tensor forward(const Tensor& x) = 0;
     virtual Tensor backward(const Tensor& x) = 0;
-
+    virtual void update(f32 /*learning_rate*/){}
 protected:
     ILayer() {}
 };
@@ -624,38 +761,53 @@ protected:
 class Relu: public ILayer
 {
 public:
+    static Relu* create();
     Relu();
-    ~Relu();
+    virtual ~Relu();
     virtual Tensor forward(const Tensor& x) override;
     virtual Tensor backward(const Tensor& x) override;
-
 protected:
-    TTensor<bool> mask_;
+    friend void print_mask(const Relu& x);
+    friend void print_mask1(const TensorMask& x);
+    friend void print_mask2(const TensorMask& x);
+    TensorMask mask_;
 };
+
+void print_mask(const Relu& x);
+void print_mask1(const TensorMask& x);
+void print_mask2(const TensorMask& x);
 
 //--- Sigmoid
 //-----------------------------------------------------
 class Sigmoid: public ILayer
 {
 public:
+    static Sigmoid* create();
     Sigmoid();
-    ~Sigmoid();
+    virtual ~Sigmoid();
     virtual Tensor forward(const Tensor& x) override;
     virtual Tensor backward(const Tensor& x) override;
-
 protected:
+    friend void print_out(const Sigmoid& x);
+    friend void print_out1(const Tensor& x);
+    friend void print_out2(const Tensor& x);
     Tensor r_;
 };
+
+void print_out(const Sigmoid& x);
+void print_out1(const Tensor& x);
+void print_out2(const Tensor& x);
 
 //--- Affine
 //-----------------------------------------------------
 class Affine: public ILayer
 {
 public:
-    explicit Affine(std::initializer_list<u32> dims);
+    static Affine* create(std::initializer_list<u32> dims, bool bias=true, bool train=false);
+    explicit Affine(std::initializer_list<u32> dims, bool bias=true, bool train=false);
     Affine(Affine&& other);
     Affine& operator=(Affine&& other);
-    ~Affine();
+    virtual ~Affine();
 
     u32 ndims() const;
     virtual u32 dim(u32 d) const override;
@@ -665,72 +817,44 @@ public:
     f32& weight(u32 x0, u32 x1);
     f32 bias(u32 x0) const;
     f32& bias(u32 x0);
+
+    const Tensor& w() const;
+    const Tensor& b() const;
+
+    const Tensor& dw() const;
+    const Tensor& db() const;
+
+    virtual void update(f32 learning_rate);
 private:
     Affine(const Affine&) = delete;
     Affine& operator=(const Affine&) = delete;
+    friend void random(Affine& x, f32 weight_std);
+
     Tensor weight_;
     Tensor bias_;
-    //Tensor x_;
+    Tensor x_;
+    Tensor dw_;
+    Tensor db_;
+    bool train_;
 };
+
+ void random(Affine& x, f32 weight_std);
 
 //--- Softmax
 //-----------------------------------------------------
 class Softmax: public ILayer
 {
 public:
-    Softmax();
-    ~Softmax();
+    static Softmax* create();
+    explicit Softmax();
+    virtual ~Softmax();
     virtual Tensor forward(const Tensor& x) override;
-    virtual Tensor backward(const Tensor& t) override;
+    virtual Tensor backward(const Tensor& x) override;
 protected:
-    Tensor y_;
+    Tensor x_;
 };
 
-//--- Loss
-//-----------------------------------------------------
-class Loss: public ILayer
-{
-public:
-    Loss();
-    ~Loss();
-    virtual Tensor forward(const Tensor& y) override;
-    virtual Tensor backward(const Tensor& t) override;
-protected:
-    Tensor y_;
-};
-
-//--- Layer
-//-----------------------------------------------------
-class Layer
-{
-public:
-    explicit Layer(Activation activation, bool bias, bool train, std::initializer_list<u32> dims);
-    Layer(Layer&& other);
-    Layer& operator=(Layer&& other);
-    ~Layer();
-
-    u32 ndims() const;
-    u32 dim(u32 d) const;
-    void set_random();
-    Tensor forward(const Tensor& input);
-    f32 weight(u32 x0, u32 x1) const;
-    f32& weight(u32 x0, u32 x1);
-    f32 bias(u32 x0) const;
-    f32& bias(u32 x0);
-
-    void set_train(bool train);
-
-private:
-    Layer(const Layer&) = delete;
-    Layer& operator=(const Layer&) = delete;
-    Activation activation_;
-    bool train_;
-    Tensor weight_;
-    Tensor bias_;
-    Tensor last_input_;
-};
-
-//--- Layer
+//--- IDataLoader
 //-----------------------------------------------------
 class IDataLoader
 {
@@ -740,7 +864,7 @@ public:
     virtual const Tensor& getOutput() = 0;
 };
 
-//--- Layer
+//--- ILogger
 //-----------------------------------------------------
 class ILogger
 {
@@ -748,7 +872,7 @@ public:
     virtual void write(s32 step, f32 loss, const char* format, ...) = 0;
 };
 
-//--- Layer
+//--- BaseLogger
 //-----------------------------------------------------
 class BaseLogger: public ILogger
 {
@@ -778,11 +902,28 @@ public:
 
     const ILayer& operator[](u32 index) const;
     ILayer& operator[](u32 index);
+
+    template<class T>
+    const T& cast(u32 index) const
+    {
+        return *reinterpret_cast<const T*>(layers_[index]);
+    }
+
+    template<class T>
+    T& cast(u32 index)
+    {
+        return *reinterpret_cast<T*>(layers_[index]);
+    }
+
     void add(ILayer* layer);
 
-    Tensor predict(const Tensor& input);
-    f32 loss(const Tensor& input0, const Tensor& input1);
-
+    Tensor predict(const Tensor& x);
+    Tensor forward(const Tensor& x);
+    Tensor backward(const Tensor& t);
+    void update(f32 learningRate);
+    f32 loss(const Tensor& x, const Tensor& t);
+    void gradient(const Tensor& x, const Tensor& t);
+    Tensor numerical_gradient(const Tensor& x, const Tensor& t);
 private:
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;

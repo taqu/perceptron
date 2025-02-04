@@ -98,13 +98,13 @@ DataLoader::~DataLoader()
 
 bool DataLoader::next()
 {
+	using namespace perceptron;
 	if(data_.size()<BatchSize){
 		return false;
 	}
-	std::uniform_int_distribution<uint32_t> dist(0, static_cast<uint32_t>(data_.size()));
 	auto&& engine = perceptron::System::getInstance().getRand();
 	for(size_t i=0; i<samples_.size(); ++i){
-		samples_[i] = dist(engine);
+		samples_[i] = engine.range(data_.size());
 	}
 	for(uint32_t b=0; b<BatchSize; ++b){
 		const Item& item = data_[samples_[b]];
@@ -186,7 +186,26 @@ int main(void)
 	param.totalSteps_ = 1;
 	param.stepsInEpoch_ = 1;
 	Logger logger;
-	Model model;
-	System::terminate();
+    Model model;
+    {
+        Affine* layer0 = Affine::create({5, 4}, true, true);
+        random(*layer0, 0.01f);
+        Affine* layer1 = Affine::create({4, 4}, true, true);
+        random(*layer1, 0.01f);
+        Softmax* softmax = Softmax::create();
+        model.add(layer0);
+        model.add(layer1);
+        model.add(softmax);
+
+        for(s32 i = 0; i < 10; ++i) {
+            Tensor r0 = model.forward(x);
+            print2(r0);
+            f32 loss0 = cross_entropy_error(r0, t);
+            printf("loss: %f\n", loss0);
+            Tensor d0 = model.backward(t);
+            model.update(0.1f);
+        }
+    }
+    System::terminate();
 	return 0;
 }
