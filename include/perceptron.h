@@ -751,6 +751,7 @@ public:
     virtual u32 dim(u32 /*index*/) const { return 0;}
     virtual Tensor forward(const Tensor& x) = 0;
     virtual Tensor backward(const Tensor& x) = 0;
+    virtual void numerical_gradient(std::function<f32()> /*f*/){}
     virtual void update(f32 /*learning_rate*/){}
 protected:
     ILayer() {}
@@ -824,6 +825,7 @@ public:
     const Tensor& dw() const;
     const Tensor& db() const;
 
+    virtual void numerical_gradient(std::function<f32()> f);
     virtual void update(f32 learning_rate);
 private:
     Affine(const Affine&) = delete;
@@ -923,7 +925,7 @@ public:
     void update(f32 learningRate);
     f32 loss(const Tensor& x, const Tensor& t);
     void gradient(const Tensor& x, const Tensor& t);
-    Tensor numerical_gradient(const Tensor& x, const Tensor& t);
+    void numerical_gradient(const Tensor& x, const Tensor& t);
 private:
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;

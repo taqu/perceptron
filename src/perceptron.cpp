@@ -191,7 +191,6 @@ Tensor::Tensor(u32 ndims, const u32 dims[4])
     ndims_ = ndims;
     ::memcpy(dims_, dims, sizeof(u32) * 4);
 
-    PERC_FREE(data_);
     u32 size = total() * sizeof(f32);
     data_ = static_cast<f32*>(PERC_MALLOC(size));
     ::memset(data_, 0, size);
@@ -253,11 +252,13 @@ Tensor::~Tensor()
 
 void Tensor::reshape(u32 ndims, const u32 dims[4])
 {
-    u32 old_total = total();
     ndims_ = ndims;
     ::memcpy(dims_, dims, sizeof(u32) * 4);
-    u32 new_total = total();
-    assert(old_total == new_total);
+
+    PERC_FREE(data_);
+    u32 size = total() * sizeof(f32);
+    data_ = static_cast<f32*>(PERC_MALLOC(size));
+    ::memset(data_, 0, size);
 }
 
 u32 Tensor::ndims() const
@@ -824,6 +825,7 @@ void TensorMask::reshape(u32 ndims, const u32 dims[4])
     u32 num = ((total() + 31UL) & ~31UL) >> 5;
     u32 size = num * sizeof(u32);
     data_ = static_cast<u32*>(PERC_MALLOC(size));
+    ::memset(data_, 0, size);
 }
 
 u32 TensorMask::ndims() const
@@ -991,8 +993,7 @@ Tensor Relu::forward(const Tensor& x)
     for(u32 i = 0; i < total; ++i) {
         mask_.set_linear(i, x.begin1()[i] <= 0.0);
     }
-    Tensor r;
-    r.reshape(x.ndims(), x.dims());
+    Tensor r(x.ndims(), x.dims());
     for(u32 i = 0; i < total; ++i) {
         r.begin1()[i] = mask_[i] ? 0.0f : x.begin1()[i];
     }
@@ -1228,6 +1229,38 @@ const Tensor& Affine::db() const
     return db_;
 }
 
+void Affine::numerical_gradient(std::function<f32()> f)
+{
+    const f32 h = 1.0e-4f;
+    dw_.reshape(weight_.ndims(), weight_.dims());
+    u32 total = weight_.total();
+    for(u32 i=0; i<total; ++i){
+        f32 tmp = weight_[i];
+        weight_[i] = tmp + h;
+        f32 fxh0 = f();
+
+        weight_[i] = tmp - h;
+        f32 fxh1 = f();
+
+        dw_[i] = (fxh0-fxh1)/(2*h);
+        weight_[i] = tmp;
+    }
+
+    db_.reshape(bias_.ndims(), bias_.dims());
+    total = bias_.total();
+    for(u32 i=0; i<total; ++i){
+        f32 tmp = bias_[i];
+        bias_[i] = tmp + h;
+        f32 fxh0 = f();
+
+        bias_[i] = tmp - h;
+        f32 fxh1 = f();
+
+        db_[i] = (fxh0-fxh1)/(2*h);
+        bias_[i] = tmp;
+    }
+}
+
 void Affine::update(f32 learning_rate)
 {
     u32 total;
@@ -1417,9 +1450,15 @@ void Model::gradient(const Tensor& x, const Tensor& t)
     backward(t);
 }
 
-    Tensor Model::numerical_gradient(const Tensor& x, const Tensor& t)
+void Model::numerical_gradient(const Tensor& x, const Tensor& t)
 {
-        return t;
+    auto f = [model=this,x,t](){
+        return model->loss(x,t);
+    };
+
+    for(u32 i=0; i<size_; ++i){
+        layers_[i]->numerical_gradient(f);
+    }
 }
 
 } // namespace perceptron

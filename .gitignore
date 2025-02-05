@@ -32,5 +32,6 @@
 *.app
 
 /data
-/bin
+bin/
 /build
+/thirdparty
