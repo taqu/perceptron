@@ -1461,4 +1461,9 @@ void Model::numerical_gradient(const Tensor& x, const Tensor& t)
     }
 }
 
+f32 Model::accuracy(const Tensor& x, const Tensor& t, std::function<f32(const Tensor& y,const Tensor& t)> f)
+{
+    Tensor y = forward(x);
+    return f(y,t);
+}
 } // namespace perceptron

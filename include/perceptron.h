@@ -926,6 +926,7 @@ public:
     f32 loss(const Tensor& x, const Tensor& t);
     void gradient(const Tensor& x, const Tensor& t);
     void numerical_gradient(const Tensor& x, const Tensor& t);
+    f32 accuracy(const Tensor& x, const Tensor& t, std::function<f32(const Tensor& y,const Tensor& t)> f);
 private:
     Model(const Model&) = delete;
     Model& operator=(const Model&) = delete;

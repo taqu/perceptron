@@ -182,28 +182,36 @@ int main(void)
 	if(!load(testloader.data_, "data/mnist_test.csv")){
 		return -1;
 	}
+	u32 num_iteration = 2;
 	TrainParam param;
 	param.totalSteps_ = 1;
 	param.stepsInEpoch_ = 1;
 	Logger logger;
     Model model;
     {
-        Affine* layer0 = Affine::create({5, 4}, true, true);
+        Affine* layer0 = Affine::create({784, 50}, true, true);
         random(*layer0, 0.01f);
-        Affine* layer1 = Affine::create({4, 4}, true, true);
+        Affine* layer1 = Affine::create({50, 10}, true, true);
         random(*layer1, 0.01f);
         Softmax* softmax = Softmax::create();
         model.add(layer0);
         model.add(layer1);
         model.add(softmax);
 
-        for(s32 i = 0; i < 10; ++i) {
-            Tensor r0 = model.forward(x);
-            print2(r0);
-            f32 loss0 = cross_entropy_error(r0, t);
+		std::vector<f32> acc;
+        for(u32 i = 0; i < num_iteration; ++i) {
+			if(!dataloader.next()){
+				break;
+			}
+			const Tensor& x = dataloader.getInput();
+			const Tensor& t = dataloader.getOutput();
+			model.numerical_gradient(x,t);
+			model.update(0.1f);
+            f32 loss0 = cross_entropy_error(x,t);
             printf("loss: %f\n", loss0);
-            Tensor d0 = model.backward(t);
-            model.update(0.1f);
+			if(0 == (i%param.stepsInEpoch_) && testloader.next()){
+
+			}
         }
     }
     System::terminate();
