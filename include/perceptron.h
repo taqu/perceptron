@@ -26,6 +26,8 @@ using f32 = float;
 #    define PERC_FREE(ptr) ::mi_free(ptr)
 #endif
 
+bool isEqual(f32 x0, f32 x1, f32 epsilon=std::numeric_limits<f32>::epsilon());
+
 namespace rand_impl
 {
     template<class T>

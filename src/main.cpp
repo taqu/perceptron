@@ -133,6 +133,44 @@ const perceptron::Tensor& DataLoader::getOutput()
 	return output_;
 }
 
+class TestDataLoader
+{
+public:
+	TestDataLoader();
+	~TestDataLoader();
+	void initialize();
+    const perceptron::Tensor& getInput();
+    const perceptron::Tensor& getOutput();
+
+	std::vector<Item> data_;
+	perceptron::Tensor input_;
+	perceptron::Tensor output_;
+};
+
+TestDataLoader::TestDataLoader()
+{
+}
+
+TestDataLoader::~TestDataLoader()
+{
+}
+
+void TestDataLoader::initialize()
+{
+	input_ = perceptron::Tensor({(uint32_t)data_.size(), 784});
+	output_ = perceptron::Tensor({(uint32_t)data_.size(), 10});
+}
+
+const perceptron::Tensor& TestDataLoader::getInput()
+{
+	return input_;
+}
+
+const perceptron::Tensor& TestDataLoader::getOutput()
+{
+	return output_;
+}
+
 class Logger : public perceptron::ILogger
 {
 public:
@@ -178,14 +216,15 @@ int main(void)
 	if(!load(dataloader.data_, "data/mnist_train.csv")){
 		return -1;
 	}
-	DataLoader testloader;
+	TestDataLoader testloader;
 	if(!load(testloader.data_, "data/mnist_test.csv")){
 		return -1;
 	}
-	u32 num_iteration = 2;
+	testloader.initialize();
+	u32 num_iteration = 100;
 	TrainParam param;
 	param.totalSteps_ = 1;
-	param.stepsInEpoch_ = 1;
+	param.stepsInEpoch_ = 10;
 	Logger logger;
     Model model;
     {
@@ -207,10 +246,50 @@ int main(void)
 			const Tensor& t = dataloader.getOutput();
 			model.numerical_gradient(x,t);
 			model.update(0.1f);
-            f32 loss0 = cross_entropy_error(x,t);
+			Tensor y = model.forward(x);
+            f32 loss0 = cross_entropy_error(y,t);
             printf("loss: %f\n", loss0);
-			if(0 == (i%param.stepsInEpoch_) && testloader.next()){
+			for(u32 i=0; i<y.dim(1); ++i){
+				printf("%f,", y[i]);
+			}
+			printf("\n");
+			if(0 == (i%param.stepsInEpoch_)){
+				auto func = [](const Tensor& y,const Tensor& t){
+					assert(y.dim(0) == t.dim(0));
+					assert(y.dim(1) == t.dim(1));
+					Tensor max_y({y.dim(0)});
+					Tensor max_t({t.dim(0)});
+					for(u32 i=0; i<y.dim(0); ++i){
+						f32 maxy = y(i,0);
+						u32 maxi = 0;
+						for(u32 j=1; j<y.dim(1); ++j){
+							if(maxy<y(i,j)){
+								maxy = y(i,j);
+								maxi = j;
+							}
+						}
+						max_y[i] = maxi;
 
+						f32 maxt = t(i,0);
+						maxi = 0;
+						for(u32 j=1; j<t.dim(1); ++j){
+							if(maxt<t(i,j)){
+								maxt = t(i,j);
+								maxi = j;
+							}
+						}
+						max_t[i] = maxi;
+					}
+					u32 count = 0;
+					for(u32 i=0; i<max_y.dim(0); ++i){
+						if(isEqual(max_y[i], max_t[i])){
+							++count;
+						}
+					}
+					return static_cast<f32>(count)/y.dim(0);
+				};
+				f32 test_acc = model.accuracy(testloader.getInput(), testloader.getOutput(), func);
+				printf("accuracy: %f\n", test_acc);
 			}
         }
     }

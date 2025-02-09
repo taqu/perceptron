@@ -8,9 +8,15 @@
 #include <limits>
 #include <random>
 #include <numbers>
+#include <algorithm>
 
 namespace perceptron
 {
+bool isEqual(f32 x0, f32 x1, f32 epsilon)
+{
+    return std::abs(x0-x1)<=epsilon;
+}
+
 namespace
 {
     inline uint32_t rotr32(uint32_t x, uint32_t r)
