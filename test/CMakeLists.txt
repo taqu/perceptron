@@ -2,14 +2,14 @@ cmake_minimum_required(VERSION 3.6)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug" "Release")
 
-set(PROJECT_NAME perce_test)
+set(PROJECT_NAME test_mindnn)
 project(${PROJECT_NAME})
 
-set(HEADERS ${PROJECT_ROOT}/include/perceptron.h "catch_amalgamated.hpp")
-set(SOURCES ${PROJECT_ROOT}/src/perceptron.cpp "main.cpp;test.cpp;catch_amalgamated.cpp")
+set(HEADERS ${HEADERS} "catch_amalgamated.hpp")
+set(SOURCES ${SOURCES} "main.cpp;test.cpp;catch_amalgamated.cpp")
 
 include_directories(AFTER ${CMAKE_CURRENT_SOURCE_DIR})
-set(FILES ${SOURCES})
+set(FILES ${SOURCES} ${SOURCES})
 
 source_group("include" FILES ${HEADERS})
 source_group("src" FILES ${SOURCES})

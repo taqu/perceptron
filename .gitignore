@@ -6,6 +6,11 @@
 *.lo
 *.o
 *.obj
+*.vcxproj
+*.filters
+*.cmake
+*.sln
+CMakeCache.txt
 
 # Precompiled Headers
 *.gch
@@ -34,4 +39,8 @@
 /data
 bin/
 /build
-/thirdparty
+x64/
+CMakeFiles/
+/thirdparty/mimalloc
+/thirdparty/CMakeLists.txt
+

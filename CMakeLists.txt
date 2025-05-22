@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 set(CMAKE_CONFIGURATION_TYPES "Debug" "Release")
 
-set(PROJECT_NAME perceptron)
+set(PROJECT_NAME mindnn)
 project(${PROJECT_NAME})
 
 set(PROJECT_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
@@ -35,6 +35,7 @@ if(result)
     message(FATAL_ERROR "Building release external projects failed: ${result}")
 endif()
 
+# mimalloc
 set(MIMALLOC_ROOT ${THIRDPARTY_DIR}/mimalloc)
 set(MIMALLOC_INCLUDE ${MIMALLOC_ROOT}/include/mimalloc-2.1)
 set(MIMALLOC_LIB ${MIMALLOC_ROOT}/lib/mimalloc-2.1)
@@ -45,19 +46,27 @@ link_directories(AFTER ${MIMALLOC_LIB})
 add_library(MIMALLOC MODULE IMPORTED)
 set_target_properties(MIMALLOC PROPERTIES IMPORTED_LOCATION_DEBUG "mimalloc-staticd.lib" IMPORTED_LOCATION_RELEASE "mimalloc-static.lib")
 
+# eigen
+set(EIGEN_ROOT ${THIRDPARTY_DIR}/eigen)
+set(EIGEN_INCLUDE ${EIGEN_ROOT})
+include_directories(AFTER ${EIGEN_INCLUDE})
+
 ########################################################################
 # Sources
 set(HEADERS
-    "${HEADER_DIR}/perceptron.h")
+    "${HEADER_DIR}/mindnn.h"
+    "${HEADER_DIR}/gguf.h"
+    "${HEADER_DIR}/layer.h")
 
 set(SOURCES
-    "${SOURCE_DIR}/perceptron.cpp"
-    "${SOURCE_DIR}/main.cpp")
+    "${SOURCE_DIR}/mindnn.cpp"
+    "${SOURCE_DIR}/gguf.cpp"
+    "${SOURCE_DIR}/layer.cpp")
 
 source_group("include" FILES ${HEADERS})
-source_group("src" FILES ${SOURCES})
+source_group("src" FILES ${SOURCES} "${SOURCE_DIR}/main.cpp")
 
-set(FILES ${HEADERS} ${SOURCES})
+set(FILES ${HEADERS} ${SOURCES} "${SOURCE_DIR}/main.cpp")
 
 set(OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIRECTORY}")
@@ -69,14 +78,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_DIRECTORY}")
 add_executable(${PROJECT_NAME} ${FILES})
 
 if(MSVC)
-    set(DEFAULT_CXX_FLAGS "/DWIN32 /D_WINDOWS /D_MBCS /W4 /WX- /nologo /fp:precise /arch:AVX /Zc:wchar_t /TP /Gd /std:c++20 /std:c11")
+    set(DEFAULT_CXX_FLAGS "/DWIN32 /D_WINDOWS /D_MBCS /W4 /WX- /nologo /fp:precise /arch:AVX /Zc:wchar_t /TP /Gd /std:c++20 /std:c11 /DEIGEN_MPL2_ONLY")
     set(CMAKE_CXX_FLAGS "${DEFAULT_CXX_FLAGS}")
     set(CMAKE_CXX_FLAGS_DEBUG "/D_DEBUG /MTd /Zi /Ob0 /Od /RTC1 /Gy /GR /GS /Gm- /EHsc")
     set(CMAKE_CXX_FLAGS_RELEASE "/MT /O2 /Oi /GL /GR /DNDEBUG /EHsc-")
     target_link_libraries(${PROJECT_NAME} MIMALLOC)
 
 elseif(UNIX)
-    set(DEFAULT_CXX_FLAGS "-Wall -O2 -std=c++20 -std=gnu++20 -march=x86-64-v3 -fno-exceptions")
+    set(DEFAULT_CXX_FLAGS "-Wall -O2 -std=c++20 -std=gnu++20 -march=x86-64-v3 -fno-exceptions -DEIGEN_MPL2_ONLY")
     set(CMAKE_CXX_FLAGS "${DEFAULT_CXX_FLAGS}")
     target_link_libraries(${PROJECT_NAME} MIMALLOC)
 elseif(APPLE)
