@@ -99,7 +99,7 @@ namespace Catch {
                     samples.reserve(static_cast<size_t>(last - first));
 
                     FDuration mean = FDuration(0);
-                    int i = 0;
+                    int32_t i = 0;
                     for (auto it = first; it < last; ++it, ++i) {
                         samples.push_back(*it);
                         mean += *it;
@@ -188,7 +188,7 @@ namespace Catch {
                 template <typename URng, typename Estimator>
                 static sample
                 resample( URng& rng,
-                          unsigned int resamples,
+                          unsigned int32_t resamples,
                           double const* first,
                           double const* last,
                           Estimator& estimator ) {
@@ -214,7 +214,7 @@ namespace Catch {
 
                 static double outlier_variance( Estimate<double> mean,
                                                 Estimate<double> stddev,
-                                                int n ) {
+                                                int32_t n ) {
                     double sb = stddev.point;
                     double mn = mean.point / n;
                     double mg_min = mn / 2.;
@@ -229,7 +229,7 @@ namespace Catch {
                         double k0 = -n * nd;
                         double k1 = sb2 - n * sg2 + nd;
                         double det = k1 * k1 - 4 * sg2 * k0;
-                        return static_cast<int>( -2. * k0 /
+                        return static_cast<int32_t>( -2. * k0 /
                                                  ( k1 + std::sqrt( det ) ) );
                     };
 
@@ -362,13 +362,13 @@ namespace Catch {
     namespace Benchmark {
         namespace Detail {
 
-            double weighted_average_quantile( int k,
-                                              int q,
+            double weighted_average_quantile( int32_t k,
+                                              int32_t q,
                                               double* first,
                                               double* last ) {
                 auto count = last - first;
                 double idx = (count - 1) * k / static_cast<double>(q);
-                int j = static_cast<int>(idx);
+                int32_t j = static_cast<int32_t>(idx);
                 double g = idx - j;
                 std::nth_element(first, first + j, last);
                 auto xj = first[j];
@@ -502,7 +502,7 @@ namespace Catch {
             }
 
             bootstrap_analysis analyse_samples(double confidence_level,
-                                               unsigned int n_resamples,
+                                               unsigned int32_t n_resamples,
                                                double* first,
                                                double* last) {
                 auto mean = &Detail::mean;
@@ -537,7 +537,7 @@ namespace Catch {
                 auto stddev_estimate = Estimate(stddev);
 #endif // CATCH_USE_ASYNC
 
-                auto n = static_cast<int>(last - first); // seriously, one can't use integral types without hell in C++
+                auto n = static_cast<int32_t>(last - first); // seriously, one can't use integral types without hell in C++
                 double outlier_variance = Detail::outlier_variance(mean_estimate, stddev_estimate, n);
 
                 return { mean_estimate, stddev_estimate, outlier_variance };
@@ -736,7 +736,7 @@ namespace Catch {
         }
 
         struct bazelShardingOptions {
-            unsigned int shardIndex, shardCount;
+            unsigned int32_t shardIndex, shardCount;
             std::string shardFilePath;
         };
 
@@ -772,14 +772,14 @@ namespace Catch {
             if ( !shardIndex ) {
                 Catch::cerr()
                     << "Warning: could not parse 'TEST_SHARD_INDEX' ('" << bazelShardIndex
-                    << "') as unsigned int.\n";
+                    << "') as unsigned int32_t.\n";
                 return {};
             }
             auto shardTotal = parseUInt( bazelShardTotal );
             if ( !shardTotal ) {
                 Catch::cerr()
                     << "Warning: could not parse 'TEST_TOTAL_SHARD' ('"
-                    << bazelShardTotal << "') as unsigned int.\n";
+                    << bazelShardTotal << "') as unsigned int32_t.\n";
                 return {};
             }
 
@@ -904,19 +904,19 @@ namespace Catch {
     double Config::minDuration() const                 { return m_data.minDuration; }
     TestRunOrder Config::runOrder() const              { return m_data.runOrder; }
     uint32_t Config::rngSeed() const                   { return m_data.rngSeed; }
-    unsigned int Config::shardCount() const            { return m_data.shardCount; }
-    unsigned int Config::shardIndex() const            { return m_data.shardIndex; }
+    unsigned int32_t Config::shardCount() const            { return m_data.shardCount; }
+    unsigned int32_t Config::shardIndex() const            { return m_data.shardIndex; }
     ColourMode Config::defaultColourMode() const       { return m_data.defaultColourMode; }
     bool Config::shouldDebugBreak() const              { return m_data.shouldDebugBreak; }
-    int Config::abortAfter() const                     { return m_data.abortAfter; }
+    int32_t Config::abortAfter() const                     { return m_data.abortAfter; }
     bool Config::showInvisibles() const                { return m_data.showInvisibles; }
     Verbosity Config::verbosity() const                { return m_data.verbosity; }
 
     bool Config::skipBenchmarks() const                           { return m_data.skipBenchmarks; }
     bool Config::benchmarkNoAnalysis() const                      { return m_data.benchmarkNoAnalysis; }
-    unsigned int Config::benchmarkSamples() const                 { return m_data.benchmarkSamples; }
+    unsigned int32_t Config::benchmarkSamples() const                 { return m_data.benchmarkSamples; }
     double Config::benchmarkConfidenceInterval() const            { return m_data.benchmarkConfidenceInterval; }
-    unsigned int Config::benchmarkResamples() const               { return m_data.benchmarkResamples; }
+    unsigned int32_t Config::benchmarkResamples() const               { return m_data.benchmarkResamples; }
     std::chrono::milliseconds Config::benchmarkWarmupTime() const { return std::chrono::milliseconds(m_data.benchmarkWarmupTime); }
 
     void Config::readBazelEnvVars() {
@@ -1170,12 +1170,12 @@ namespace Catch {
 namespace Catch {
 
     namespace {
-        static constexpr int TestFailureExitCode = 42;
-        static constexpr int UnspecifiedErrorExitCode = 1;
-        static constexpr int AllTestsSkippedExitCode = 4;
-        static constexpr int NoTestsRunExitCode = 2;
-        static constexpr int UnmatchedTestSpecExitCode = 3;
-        static constexpr int InvalidTestSpecExitCode = 5;
+        static constexpr int32_t TestFailureExitCode = 42;
+        static constexpr int32_t UnspecifiedErrorExitCode = 1;
+        static constexpr int32_t AllTestsSkippedExitCode = 4;
+        static constexpr int32_t NoTestsRunExitCode = 2;
+        static constexpr int32_t UnmatchedTestSpecExitCode = 3;
+        static constexpr int32_t InvalidTestSpecExitCode = 5;
 
 
         IEventListenerPtr createReporter(std::string const& reporterName, ReporterConfig&& config) {
@@ -1339,7 +1339,7 @@ namespace Catch {
                 << std::left << std::setw(16) << "version: " << libraryVersion() << '\n' << std::flush;
     }
 
-    int Session::applyCommandLine( int argc, char const * const * argv ) {
+    int32_t Session::applyCommandLine( int32_t argc, char const * const * argv ) {
         if ( m_startupExceptions ) { return UnspecifiedErrorExitCode; }
 
         auto result = m_cli.parse( Clara::Args( argc, argv ) );
@@ -1369,21 +1369,21 @@ namespace Catch {
     }
 
 #if defined(CATCH_CONFIG_WCHAR) && defined(_WIN32) && defined(UNICODE)
-    int Session::applyCommandLine( int argc, wchar_t const * const * argv ) {
+    int32_t Session::applyCommandLine( int32_t argc, wchar_t const * const * argv ) {
 
         char **utf8Argv = new char *[ argc ];
 
-        for ( int i = 0; i < argc; ++i ) {
-            int bufSize = WideCharToMultiByte( CP_UTF8, 0, argv[i], -1, nullptr, 0, nullptr, nullptr );
+        for ( int32_t i = 0; i < argc; ++i ) {
+            int32_t bufSize = WideCharToMultiByte( CP_UTF8, 0, argv[i], -1, nullptr, 0, nullptr, nullptr );
 
             utf8Argv[ i ] = new char[ bufSize ];
 
             WideCharToMultiByte( CP_UTF8, 0, argv[i], -1, utf8Argv[i], bufSize, nullptr, nullptr );
         }
 
-        int returnCode = applyCommandLine( argc, utf8Argv );
+        int32_t returnCode = applyCommandLine( argc, utf8Argv );
 
-        for ( int i = 0; i < argc; ++i )
+        for ( int32_t i = 0; i < argc; ++i )
             delete [] utf8Argv[ i ];
 
         delete [] utf8Argv;
@@ -1397,12 +1397,12 @@ namespace Catch {
         m_config.reset();
     }
 
-    int Session::run() {
+    int32_t Session::run() {
         if( ( m_configData.waitForKeypress & WaitForKeypress::BeforeStart ) != 0 ) {
             Catch::cout() << "...waiting for enter/ return before starting\n" << std::flush;
             static_cast<void>(std::getchar());
         }
-        int exitCode = runInternal();
+        int32_t exitCode = runInternal();
         if( ( m_configData.waitForKeypress & WaitForKeypress::BeforeExit ) != 0 ) {
             Catch::cout() << "...waiting for enter/ return before exiting, with code: " << exitCode << '\n' << std::flush;
             static_cast<void>(std::getchar());
@@ -1425,7 +1425,7 @@ namespace Catch {
         return *m_config;
     }
 
-    int Session::runInternal() {
+    int32_t Session::runInternal() {
         if ( m_startupExceptions ) { return UnspecifiedErrorExitCode; }
 
         if (m_configData.showHelp || m_configData.libIdentify) {
@@ -1922,8 +1922,8 @@ namespace Catch {
     auto Timer::getElapsedMicroseconds() const -> uint64_t {
         return getElapsedNanoseconds()/1000;
     }
-    auto Timer::getElapsedMilliseconds() const -> unsigned int {
-        return static_cast<unsigned int>(getElapsedMicroseconds()/1000);
+    auto Timer::getElapsedMilliseconds() const -> unsigned int32_t {
+        return static_cast<unsigned int32_t>(getElapsedMicroseconds()/1000);
     }
     auto Timer::getElapsedSeconds() const -> double {
         return getElapsedMicroseconds()/1000000.0;
@@ -1943,13 +1943,13 @@ namespace Catch {
 namespace Detail {
 
     namespace {
-        const int hexThreshold = 255;
+        const int32_t hexThreshold = 255;
 
         struct Endianness {
             enum Arch { Big, Little };
 
             static Arch which() {
-                int one = 1;
+                int32_t one = 1;
                 // If the lowest byte we read is non-zero, we can assume
                 // that little endian format is used.
                 auto value = *reinterpret_cast<char*>(&one);
@@ -1958,7 +1958,7 @@ namespace Detail {
         };
 
         template<typename T>
-        std::string fpToString(T value, int precision) {
+        std::string fpToString(T value, int32_t precision) {
             if (Catch::isnan(value)) {
                 return "nan";
             }
@@ -2022,7 +2022,7 @@ namespace Detail {
 
     std::string rawMemoryToString( const void *object, std::size_t size ) {
         // Reverse order for little endian architectures
-        int i = 0, end = static_cast<int>( size ), inc = 1;
+        int32_t i = 0, end = static_cast<int32_t>( size ), inc = 1;
         if( Endianness::which() == Endianness::Little ) {
             i = end-1;
             end = inc = -1;
@@ -2109,7 +2109,7 @@ std::string StringMaker<std::byte>::convert(std::byte value) {
 }
 #endif // defined(CATCH_CONFIG_CPP17_BYTE)
 
-std::string StringMaker<int>::convert(int value) {
+std::string StringMaker<int32_t>::convert(int32_t value) {
     return ::Catch::Detail::stringify(static_cast<long long>(value));
 }
 std::string StringMaker<long>::convert(long value) {
@@ -2124,7 +2124,7 @@ std::string StringMaker<long long>::convert(long long value) {
     return rss.str();
 }
 
-std::string StringMaker<unsigned int>::convert(unsigned int value) {
+std::string StringMaker<unsigned int32_t>::convert(unsigned int32_t value) {
     return ::Catch::Detail::stringify(static_cast<unsigned long long>(value));
 }
 std::string StringMaker<unsigned long>::convert(unsigned long value) {
@@ -2149,7 +2149,7 @@ std::string StringMaker<signed char>::convert(signed char value) {
     } else if (value == '\t') {
         return "'\\t'";
     } else if ('\0' <= value && value < ' ') {
-        return ::Catch::Detail::stringify(static_cast<unsigned int>(value));
+        return ::Catch::Detail::stringify(static_cast<unsigned int32_t>(value));
     } else {
         char chstr[] = "' '";
         chstr[1] = value;
@@ -2163,13 +2163,13 @@ std::string StringMaker<unsigned char>::convert(unsigned char value) {
     return ::Catch::Detail::stringify(static_cast<char>(value));
 }
 
-int StringMaker<float>::precision = std::numeric_limits<float>::max_digits10;
+int32_t StringMaker<float>::precision = std::numeric_limits<float>::max_digits10;
 
 std::string StringMaker<float>::convert(float value) {
     return Detail::fpToString(value, precision) + 'f';
 }
 
-int StringMaker<double>::precision = std::numeric_limits<double>::max_digits10;
+int32_t StringMaker<double>::precision = std::numeric_limits<double>::max_digits10;
 
 std::string StringMaker<double>::convert(double value) {
     return Detail::fpToString(value, precision);
@@ -2255,11 +2255,11 @@ namespace Catch {
 namespace Catch {
 
     Version::Version
-        (   unsigned int _majorVersion,
-            unsigned int _minorVersion,
-            unsigned int _patchNumber,
+        (   unsigned int32_t _majorVersion,
+            unsigned int32_t _minorVersion,
+            unsigned int32_t _patchNumber,
             char const * const _branchName,
-            unsigned int _buildNumber )
+            unsigned int32_t _buildNumber )
     :   majorVersion( _majorVersion ),
         minorVersion( _minorVersion ),
         patchNumber( _patchNumber ),
@@ -3049,7 +3049,7 @@ namespace Catch {
             return result;
         }
 
-        Args::Args(int argc, char const* const* argv) :
+        Args::Args(int32_t argc, char const* const* argv) :
             m_exeName(argv[0]), m_args(argv + 1, argv + argc) {}
 
         Args::Args(std::initializer_list<StringRef> args) :
@@ -3220,7 +3220,7 @@ namespace Catch {
             // every time it could fail. For valid inputs, this is still called
             // at most once.
             if (!hadOutputFile) {
-                int n_reporters_without_file = 0;
+                int32_t n_reporters_without_file = 0;
                 for (auto const& spec : config.reporterSpecifications) {
                     if (spec.outputFile().none()) {
                         n_reporters_without_file++;
@@ -3284,7 +3284,7 @@ namespace Catch {
             | Opt( [&]( bool ){ config.abortAfter = 1; } )
                 ["-a"]["--abort"]
                 ( "abort at first failure" )
-            | Opt( [&]( int x ){ config.abortAfter = x; }, "no. failures" )
+            | Opt( [&]( int32_t x ){ config.abortAfter = x; }, "no. failures" )
                 ["-x"]["--abortx"]
                 ( "abort after x failures" )
             | Opt( accept_many, setWarning, "warning name" )
@@ -3611,7 +3611,7 @@ namespace Catch {
             return Detail::make_unique<NoColourImpl>( stream );
         }
 
-        CATCH_ERROR( "Could not create colour impl for selection " << static_cast<int>(colourSelection) );
+        CATCH_ERROR( "Could not create colour impl for selection " << static_cast<int32_t>(colourSelection) );
     }
 
     bool isColourImplAvailable( ColourMode colourSelection ) {
@@ -3721,7 +3721,7 @@ namespace Catch {
         // Returns true if the current process is being debugged (either
         // running under the debugger or has a debugger attached post facto).
         bool isDebuggerActive(){
-            int                 mib[4];
+            int32_t                 mib[4];
             struct kinfo_proc   info;
             std::size_t         size;
 
@@ -3776,7 +3776,7 @@ namespace Catch {
             ErrnoGuard guard;
             std::ifstream in("/proc/self/status");
             for( std::string line; std::getline(in, line); ) {
-                static const int PREFIX_LEN = 11;
+                static const int32_t PREFIX_LEN = 11;
                 if( line.compare(0, PREFIX_LEN, "TracerPid:\t") == 0 ) {
                     // We're traced if the PID is not 0 and no other PID starts
                     // with 0 digit, so it's enough to check for just a single
@@ -3789,14 +3789,14 @@ namespace Catch {
         }
     } // namespace Catch
 #elif defined(_MSC_VER)
-    extern "C" __declspec(dllimport) int __stdcall IsDebuggerPresent();
+    extern "C" __declspec(dllimport) int32_t __stdcall IsDebuggerPresent();
     namespace Catch {
         bool isDebuggerActive() {
             return IsDebuggerPresent() != 0;
         }
     }
 #elif defined(__MINGW32__)
-    extern "C" __declspec(dllimport) int __stdcall IsDebuggerPresent();
+    extern "C" __declspec(dllimport) int32_t __stdcall IsDebuggerPresent();
     namespace Catch {
         bool isDebuggerActive() {
             return IsDebuggerPresent() != 0;
@@ -3899,7 +3899,7 @@ namespace Catch {
 
         EnumInfo::~EnumInfo() = default;
 
-        StringRef EnumInfo::lookup( int value ) const {
+        StringRef EnumInfo::lookup( int32_t value ) const {
             for( auto const& valueToName : m_values ) {
                 if( valueToName.first == value )
                     return valueToName.second;
@@ -3907,7 +3907,7 @@ namespace Catch {
             return "{** unexpected enum value **}"_sr;
         }
 
-        Catch::Detail::unique_ptr<EnumInfo> makeEnumInfo( StringRef enumName, StringRef allValueNames, std::vector<int> const& values ) {
+        Catch::Detail::unique_ptr<EnumInfo> makeEnumInfo( StringRef enumName, StringRef allValueNames, std::vector<int32_t> const& values ) {
             auto enumInfo = Catch::Detail::make_unique<EnumInfo>();
             enumInfo->m_name = enumName;
             enumInfo->m_values.reserve( values.size() );
@@ -3921,7 +3921,7 @@ namespace Catch {
             return enumInfo;
         }
 
-        EnumInfo const& EnumValuesRegistry::registerEnum( StringRef enumName, StringRef allValueNames, std::vector<int> const& values ) {
+        EnumInfo const& EnumValuesRegistry::registerEnum( StringRef enumName, StringRef allValueNames, std::vector<int32_t> const& values ) {
             m_enumInfos.push_back(makeEnumInfo(enumName, allValueNames, values));
             return *m_enumInfos.back();
         }
@@ -4152,7 +4152,7 @@ namespace Catch {
 namespace Catch {
 
     struct SignalDefs {
-        int id;
+        int32_t id;
         const char* name;
     };
 
@@ -4190,7 +4190,7 @@ namespace Catch {
         sigaltstack(&oldSigStack, nullptr);
     }
 
-    static void handleSignal( int sig ) {
+    static void handleSignal( int32_t sig ) {
         char const * name = "<unknown signal>";
         for (auto const& def : signalDefs) {
             if (sig == def.id) {
@@ -4344,7 +4344,7 @@ namespace Detail {
             }
 
         private:
-            int overflow( int c ) override {
+            int32_t overflow( int32_t c ) override {
                 sync();
 
                 if( c != EOF ) {
@@ -4356,7 +4356,7 @@ namespace Detail {
                 return 0;
             }
 
-            int sync() override {
+            int32_t sync() override {
                 if( pbase() != pptr() ) {
                     m_writer( std::string( pbase(), static_cast<std::string::size_type>( pptr() - pbase() ) ) );
                     setp( pbase(), epptr() );
@@ -4631,7 +4631,7 @@ namespace Catch {
 namespace Catch {
 
     LeakDetector::LeakDetector() {
-        int flag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+        int32_t flag = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
         flag |= _CRTDBG_LEAK_CHECK_DF;
         flag |= _CRTDBG_ALLOC_MEM_DF;
         _CrtSetDbgFlag(flag);
@@ -4771,10 +4771,10 @@ namespace Catch {
 
 #if defined(CATCH_CONFIG_WCHAR) && defined(CATCH_PLATFORM_WINDOWS) && defined(_UNICODE) && !defined(DO_NOT_USE_WMAIN)
 // Standard C/C++ Win32 Unicode wmain entry point
-extern "C" int __cdecl wmain (int argc, wchar_t * argv[], wchar_t * []) {
+extern "C" int32_t __cdecl wmain (int32_t argc, wchar_t * argv[], wchar_t * []) {
 #else
 // Standard C/C++ main entry point
-int main (int argc, char * argv[]) {
+int32_t main (int32_t argc, char * argv[]) {
 #endif
 
     // We want to force the linker not to discard the global variable
@@ -4801,7 +4801,7 @@ namespace Catch {
     {}
 
     // This may need protecting if threading support is added
-    unsigned int MessageInfo::globalCount = 0;
+    unsigned int32_t MessageInfo::globalCount = 0;
 
 } // end namespace Catch
 
@@ -4978,8 +4978,8 @@ namespace Catch {
          */
         class FileRedirect : public OutputRedirect {
             TempFile m_outFile, m_errFile;
-            int m_originalOut = -1;
-            int m_originalErr = -1;
+            int32_t m_originalOut = -1;
+            int32_t m_originalErr = -1;
 
             // Flushes cout/cerr/clog streams and stdout/stderr FDs
             void flushEverything() {
@@ -5012,7 +5012,7 @@ namespace Catch {
                 // not capture the end of message sent before activation.
                 flushEverything();
 
-                int ret;
+                int32_t ret;
                 ret = dup2( fileno( m_outFile.getFile() ), fileno( stdout ) );
                 CATCH_ENFORCE( ret >= 0,
                                "dup2 to stdout has failed, errno: " << errno );
@@ -5025,7 +5025,7 @@ namespace Catch {
                 // capture all messages sent while the redirect was active.
                 flushEverything();
 
-                int ret;
+                int32_t ret;
                 ret = dup2( m_originalOut, fileno( stdout ) );
                 CATCH_ENFORCE(
                     ret >= 0,
@@ -5141,10 +5141,10 @@ namespace Catch {
 
 namespace Catch {
 
-    Optional<unsigned int> parseUInt(std::string const& input, int base) {
+    Optional<unsigned int32_t> parseUInt(std::string const& input, int32_t base) {
         auto trimmed = trim( input );
         // std::stoull is annoying and accepts numbers starting with '-',
-        // it just negates them into unsigned int
+        // it just negates them into unsigned int32_t
         if ( trimmed.empty() || trimmed[0] == '-' ) {
             return {};
         }
@@ -5161,10 +5161,10 @@ namespace Catch {
                 return {};
             }
             // Too large
-            if ( ret > std::numeric_limits<unsigned int>::max() ) {
+            if ( ret > std::numeric_limits<unsigned int32_t>::max() ) {
                 return {};
             }
-            return static_cast<unsigned int>(ret);
+            return static_cast<unsigned int32_t>(ret);
         }
         CATCH_CATCH_ANON( std::invalid_argument const& ) {
             // no conversion could be performed
@@ -5626,8 +5626,8 @@ namespace Catch {
                     // tracker's children, and instead return the current
                     // tracker.
                     // A case where this check is important is e.g.
-                    //     for (int i = 0; i < 5; ++i) {
-                    //         int n = GENERATE(1, 2);
+                    //     for (int32_t i = 0; i < 5; ++i) {
+                    //         int32_t n = GENERATE(1, 2);
                     //     }
                     //
                     // without it, the code above creates 5 nested generators.
@@ -6294,7 +6294,7 @@ namespace Catch {
         sharedRng().seed(config.rngSeed());
     }
 
-    unsigned int rngSeed() {
+    unsigned int32_t rngSeed() {
         return getCurrentContext().getConfig()->rngSeed();
     }
 
@@ -6574,7 +6574,7 @@ namespace Catch {
         return strncmp(m_start, rhs.m_start, rhs.m_size) < 0;
     }
 
-    int StringRef::compare( StringRef rhs ) const {
+    int32_t StringRef::compare( StringRef rhs ) const {
         auto cmpResult =
             strncmp( m_start, rhs.m_start, std::min( m_size, rhs.m_size ) );
 
@@ -7632,7 +7632,7 @@ namespace Catch {
             return *this;
         }
 
-        Column::const_iterator Column::const_iterator::operator++( int ) {
+        Column::const_iterator Column::const_iterator::operator++( int32_t ) {
             const_iterator prev( *this );
             operator++();
             return prev;
@@ -7706,7 +7706,7 @@ namespace Catch {
             return *this;
         }
 
-        Columns::iterator Columns::iterator::operator++( int ) {
+        Columns::iterator Columns::iterator::operator++( int32_t ) {
             iterator prev( *this );
             operator++();
             return prev;
@@ -7858,7 +7858,7 @@ namespace {
         std::ios_base::fmtflags f(os.flags());
         os << "\\x"
             << std::uppercase << std::hex << std::setfill('0') << std::setw(2)
-            << static_cast<int>(c);
+            << static_cast<int32_t>(c);
         os.flags(f);
     }
 
@@ -9192,7 +9192,7 @@ class TablePrinter {
     std::ostream& m_os;
     std::vector<ColumnInfo> m_columnInfos;
     ReusableStringStream m_oss;
-    int m_currentColumn = -1;
+    int32_t m_currentColumn = -1;
     bool m_isOpen = false;
 
 public:
@@ -9239,7 +9239,7 @@ public:
         const auto strSize = colStr.size();
         tp.m_oss.str("");
         tp.open();
-        if (tp.m_currentColumn == static_cast<int>(tp.m_columnInfos.size() - 1)) {
+        if (tp.m_currentColumn == static_cast<int32_t>(tp.m_columnInfos.size() - 1)) {
             tp.m_currentColumn = -1;
             tp.m_os << '\n';
         }

@@ -56,12 +56,16 @@ include_directories(AFTER ${EIGEN_INCLUDE})
 set(HEADERS
     "${HEADER_DIR}/mindnn.h"
     "${HEADER_DIR}/gguf.h"
-    "${HEADER_DIR}/layer.h")
+    "${HEADER_DIR}/layer.h"
+    "${HEADER_DIR}/activation.h"
+    "${HEADER_DIR}/optimizer.h")
 
 set(SOURCES
     "${SOURCE_DIR}/mindnn.cpp"
     "${SOURCE_DIR}/gguf.cpp"
-    "${SOURCE_DIR}/layer.cpp")
+    "${SOURCE_DIR}/layer.cpp"
+    "${SOURCE_DIR}/activation.cpp"
+    "${SOURCE_DIR}/optimizer.cpp")
 
 source_group("include" FILES ${HEADERS})
 source_group("src" FILES ${SOURCES} "${SOURCE_DIR}/main.cpp")

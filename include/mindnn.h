@@ -4,8 +4,8 @@
 #include <cmath>
 #include <cstdint>
 
-void* mindnn_malloc(size_t size, const char* file, int line);
-void* mindnn_aligned_alloc(size_t alignment, size_t size, const char* file, int line);
+void* mindnn_malloc(size_t size, const char* file, int32_t line);
+void* mindnn_aligned_alloc(size_t alignment, size_t size, const char* file, int32_t line);
 void* mindnn_malloc(size_t size);
 void* mindnn_aligned_alloc(size_t alignment, size_t size);
 
@@ -18,11 +18,11 @@ void* operator new(size_t, std::align_val_t alignment);
 void* operator new[](size_t size);
 void* operator new[](size_t, std::align_val_t alignment);
 
-void* operator new(size_t size, const char* file, int line);
-void* operator new(size_t size, std::align_val_t alignment, const char* file, int line);
+void* operator new(size_t size, const char* file, int32_t line);
+void* operator new(size_t size, std::align_val_t alignment, const char* file, int32_t line);
 
-void* operator new[](size_t size, const char* file, int line);
-void* operator new[](size_t size, std::align_val_t alignment, const char* file, int line);
+void* operator new[](size_t size, const char* file, int32_t line);
+void* operator new[](size_t size, std::align_val_t alignment, const char* file, int32_t line);
 
 void operator delete(void* ptr);
 void operator delete(void* ptr, std::align_val_t alignment);

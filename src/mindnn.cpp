@@ -2,12 +2,12 @@
 #include <mimalloc.h>
 #include <numbers>
 
-void* mindnn_malloc(size_t size, const char* file, int line)
+void* mindnn_malloc(size_t size, const char* file, int32_t line)
 {
 	return ::mi_malloc(size);
 }
 
-void* mindnn_aligned_alloc(size_t alignment, size_t size, const char* file, int line)
+void* mindnn_aligned_alloc(size_t alignment, size_t size, const char* file, int32_t line)
 {
 	return ::mi_aligned_alloc(alignment, size);
 }
@@ -32,22 +32,22 @@ void mindnn_aligned_free(void* ptr, size_t alignment)
 	mi_free_aligned(ptr, alignment);
 }
 
-void* operator new(std::size_t size, const char* file, int line)
+void* operator new(std::size_t size, const char* file, int32_t line)
 {
 	return mi_malloc(size);
 }
 
-void* operator new(std::size_t size, std::align_val_t alignment, const char* file, int line)
+void* operator new(std::size_t size, std::align_val_t alignment, const char* file, int32_t line)
 {
 	return ::mi_aligned_alloc((std::size_t)alignment, size);
 }
 
-void* operator new[](std::size_t size, const char* file, int line)
+void* operator new[](std::size_t size, const char* file, int32_t line)
 {
 	return mi_malloc(size);
 }
 
-void* operator new[](std::size_t size, std::align_val_t alignment, const char* file, int line)
+void* operator new[](std::size_t size, std::align_val_t alignment, const char* file, int32_t line)
 {
 	return ::mi_aligned_alloc((std::size_t)alignment, size);
 }
