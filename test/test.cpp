@@ -7,52 +7,93 @@
 
 #define EQ_FLOAT(x0, x1) CHECK(std::abs((x0) - (x1)) < 1.0e-7f)
 
-TEST_CASE("1Layer","[DNN]")
+TEST_CASE("sum","[DNN]")
 {
-	std::cout << "1Layer" << std::endl;
     using namespace mindnn;
-	static constexpr int32_t NumInputs = 3;
-	static constexpr int32_t NumOutputs = 2;
-	static constexpr int32_t NumIterations = 1000;
-	auto print_fn = [](const float& x) -> void {std::cout << x << ' ';};
+	Layer::Matrix a(2,3);
+	a(0,0) = -1.2189;
+	a(0,1) = 2.8932;
+	a(0,2) = 0.0421;
+    a(1,0) = -0.9734;
+	a(1,1) = 2.1272;
+	a(1,2) = -0.2493;
 
-	Dense<>::Vector x = {2.0f, 0.5f, 1.0f};
-	Dense<>::Vector y_true = {1.5f, 1.0f};
-	Dense<> dense(NumInputs, NumOutputs, [](int32_t)->float{return 1.0f;});
-	Dense<>::Vector yhat = dense.forward(x);
-	float loss = MSE<>::forward(y_true, yhat);
+	Layer::Matrix x0 = sum(a, 0);
+	std::cout  << x0 << std::endl;
+	Layer::Matrix x1 = sum(a, 1);
+	std::cout  << x1 << std::endl;
+	EQ_FLOAT(x0(0), Scalar(-2.19229984));
+	EQ_FLOAT(x0(1), Scalar(5.0204));
+	EQ_FLOAT(x0(2), Scalar(-0.2072));
+	EQ_FLOAT(x1(0), Scalar(1.71639991));
+	EQ_FLOAT(x1(1), Scalar(0.904499888));
+}
 
-	auto ts = std::chrono::high_resolution_clock::now();
-	for(int32_t i=0; i<NumIterations; ++i){
-		dense.forward(x);
-	}
-	auto te = std::chrono::high_resolution_clock::now();
-	auto dt_us = (float)std::chrono::duration_cast<std::chrono::microseconds>(te-ts).count()/NumIterations;
+TEST_CASE("mean","[DNN]")
+{
+    using namespace mindnn;
+	Layer::Matrix a(2,3);
+	a(0,0) = -1.2189;
+	a(0,1) = 2.8932;
+	a(0,2) = 0.0421;
+    a(1,0) = -0.9734;
+	a(1,1) = 2.1272;
+	a(1,2) = -0.2493;
 
-	std::cout << "input x=";
-	for_each(x.begin(), x.end(), print_fn);
-	std::cout << '\n';
+	Layer::Matrix x0 = mean(a, 0);
+	std::cout  << x0 << std::endl;
+	Layer::Matrix x1 = mean(a, 1);
+	std::cout  << x1 << std::endl;
+	EQ_FLOAT(x0(0), Scalar(-1.09614992));
+	EQ_FLOAT(x0(1), Scalar(2.5102));
+	EQ_FLOAT(x0(2), Scalar(-0.1036));
+	EQ_FLOAT(x1(0), Scalar(0.572133303));
+	EQ_FLOAT(x1(1), Scalar(0.3015));
+}
 
-	std::cout << "output y=";
-	for_each(yhat.begin(), yhat.end(), print_fn);
-	std::cout << '\n';
+TEST_CASE("LayerNorm","[DNN]")
+{
+    using namespace mindnn;
+	LayerNorm layerNorm;
+	LayerNorm::Matrix prev_layer_output(2,3);
+	prev_layer_output(0,0) = 0.3831;
+	prev_layer_output(0,1) = -0.3478;
+	prev_layer_output(0,2) = -1.8104;
+	prev_layer_output(1,0) = 1.9287;
+	prev_layer_output(1,1) = 1.5867;
+	prev_layer_output(1,2) = 0.7086;
+	layerNorm.forward(prev_layer_output);
+	const LayerNorm::Matrix& a = layerNorm.output();
+	const LayerNorm::Vector& mean = layerNorm.mean();
+	std::cout << prev_layer_output << std::endl;
+	std::cout << a << std::endl;
+	std::cout << mean << std::endl;
+	EQ_FLOAT(mean(0), Scalar(-0.5917));
+	EQ_FLOAT(mean(1), Scalar(1.4080));
 
-	std::cout << "expected y=";
-	for_each(y_true.begin(), y_true.end(), print_fn);
-	std::cout << '\n';
+	LayerNorm::Matrix next_layer_input(2,3);
 
-	std::cout << "loss: " << loss << '\n';
-
-	Dense<>::Vector dloss_dy = MSE<>::backward(y_true, yhat);
-	dense.backward(x, dloss_dy);
-
-	std::cout << "loss gradient: ";
-	for_each(dloss_dy.begin(), dloss_dy.end(), print_fn);
-	std::cout << '\n';
-
-	std::cout << "updated dense layer weights:\n";
-	std::cout << dense;
-
-	std::cout << "time dt=" << dt_us << " usec\n";
+	layerNorm.backward(prev_layer_output, a);
+#if 0
+x:  tensor([[[ 0.3831, -0.3478, -1.8104],
+         [ 1.9287,  1.5867,  0.7086]]], requires_grad=True)
+w:  tensor([1., 1., 1.], requires_grad=True)
+b:  tensor([0., 0., 0.], requires_grad=True)
+mean:  tensor([[[-0.5917],
+         [ 1.4080]]], grad_fn=<DivBackward0>)
+rstd:  tensor([[[1.0965],
+         [1.9459]]], grad_fn=<PowBackward0>)
+out:  tensor([[[ 1.0689,  0.2674, -1.3364],
+         [ 1.0132,  0.3477, -1.3610]]], grad_fn=<AddBackward0>)
+dout:  tensor([[[-0.1477,  0.0086, -1.7503],
+         [-0.2182, -1.1992, -2.0581]]])
+dx:  tensor([[[-0.3245,  0.4866, -0.1622],
+         [ 0.4082, -0.5671,  0.1589]]], grad_fn=<MulBackward0>)
+dw:  tensor([-0.3790, -0.4147,  5.1401], grad_fn=<SumBackward1>)
+db:  tensor([-0.3659, -1.1906, -3.8084])
+dx error: 1.6391277313232422e-07
+dw error: 0.0
+db error: 0.0
+#endif
 }
 

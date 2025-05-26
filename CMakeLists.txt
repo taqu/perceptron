@@ -58,14 +58,16 @@ set(HEADERS
     "${HEADER_DIR}/gguf.h"
     "${HEADER_DIR}/layer.h"
     "${HEADER_DIR}/activation.h"
-    "${HEADER_DIR}/optimizer.h")
+    "${HEADER_DIR}/optimizer.h"
+    "${HEADER_DIR}/utils.h")
 
 set(SOURCES
     "${SOURCE_DIR}/mindnn.cpp"
     "${SOURCE_DIR}/gguf.cpp"
     "${SOURCE_DIR}/layer.cpp"
     "${SOURCE_DIR}/activation.cpp"
-    "${SOURCE_DIR}/optimizer.cpp")
+    "${SOURCE_DIR}/optimizer.cpp"
+    "${SOURCE_DIR}/utils.cpp")
 
 source_group("include" FILES ${HEADERS})
 source_group("src" FILES ${SOURCES} "${SOURCE_DIR}/main.cpp")

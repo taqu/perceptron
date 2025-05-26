@@ -5,11 +5,12 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "utils.h"
 #include "activation.h"
+#include "optimizer.h"
 
 namespace mindnn
 {
-class Optimizer;
 
 static constexpr Scalar const_zero = 0.0f;
 static constexpr Scalar const_one = 1.0f;
@@ -155,7 +156,7 @@ void Dense<Activation>::backward(const Matrix& prev_layer_output, const Matrix& 
     // Now we need to calculate d(L) / d(z) = [d(a) / d(z)] * [d(L) / d(a)]
     // d(L) / d(a) is computed in the next layer, contained in next_layer_data
     // The Jacobian matrix J = d(a) / d(z) is determined by the activation function
-    Activation::apply_jacobian(z_, a_, next_layer_data, z_);
+    Activation::apply_jacobian(z_, a_, next_layer_input, z_);
     // Now z_ contains d(L) / d(z)
     // Derivative for weights, d(L) / d(W) = [d(L) / d(z)] * in'
     dw_.noalias() = prev_layer_output * z_.transpose() / cols;
@@ -351,7 +352,7 @@ void Convolutional<Activation>::convolve_valid(
     Matrix res = Matrix::Zero(res_rows, res_cols);
     int32_t& step = dims.filter_rows_;
     int32_t filter_size = dims.filter_rows_ * dims.filter_cols_;
-    int32_t filter_stride = filter_size_ * dims.out_channels_;
+    int32_t filter_stride = filter_size * dims.out_channels_;
 
     for(int32_t i = 0; i < dims.in_channels_; ++i, src += channel_stride, filter_data += filter_stride) {
         // Flatten source image
@@ -416,7 +417,7 @@ void Convolutional<Activation>::flatten_mat(
     // Number of bytes in the segment that will be copied at one time
     int32_t segment_size = dims.filter_rows_;
     size_t copy_bytes = sizeof(Scalar) * segment_size;
-    Scalar* writer = flat_mat.data();
+    Scalar* writer = flat_matrix.data();
     int32_t channel_size = dims.channel_rows_ * dims.channel_cols_;
 
     for (int32_t i = 0; i < ncols; ++i, src += stride)
@@ -479,8 +480,7 @@ void Convolutional<Activation>::convolve_full(
     pad_mat.bottomRows(padding_top).setZero();
     pad_mat.block(padding_top, 0, dims.img_rows_, pad_cols).noalias() = src_mat;
     src = pad_mat.data();
-    ConvDims pad_dim(dims.in_channels_, dims.out_channels_, pad_rows, dims.channel_cols_,
-                     dims.filter_rows_, dims.filter_cols_);
+    Dims pad_dim(dims.in_channels_, dims.out_channels_, pad_rows, dims.channel_cols_, dims.filter_rows_, dims.filter_cols_);
     // Flat matrix
     int32_t flat_rows = conv_rows_ * ncols;
     int32_t flat_cols = dims.filter_rows_ * dims.channel_cols_;
@@ -619,7 +619,7 @@ void Convolutional<Activation>::backward(const Matrix& prev_layer_output, const 
     // d(L) / d(a) is computed in the next layer, contained in next_layer_data
     // The Jacobian matrix J = d(a) / d(z) is determined by the activation function
     Matrix& dLz = z_;
-    Activation::apply_jacobian(z_, a_, next_layer_data, dLz);
+    Activation::apply_jacobian(z_, a_, next_layer_input, dLz);
     // z_j = sum_i(conv(in_i, w_ij)) + b_j
     //
     // d(z_k) / d(w_ij) = 0, if k != j
@@ -703,7 +703,7 @@ std::vector<Scalar> Convolutional<Activation>::get_derivatives() const
     // Copy the data of filters and bias to a long vector
     std::copy(df_.data(), df_.data() + df_.size(), result.begin());
     std::copy(db_.data(), db_.data() + db_.size(), result.begin() + df_.size());
-    return res;
+    return result;
 }
 
 template<class Activation>
@@ -745,15 +745,7 @@ class MaxPooling: public Layer
         // Currently we only implement the "valid" rule
         // https://stackoverflow.com/q/37674306
         MaxPooling(int32_t in_width_, int32_t in_height_, int32_t in_channels_,
-                   int32_t pooling_width_, int32_t pooling_height_) :
-            Layer(in_width_ * in_height_ * in_channels_,
-                  (in_width_ / pooling_width_) * (in_height_ / pooling_height_) * in_channels_),
-            channel_rows_(in_height_), channel_cols_(in_width_),
-            in_channels_(in_channels_),
-            pool_rows_(pooling_height_), pool_cols_(pooling_width_),
-            out_rows_(channel_rows_ / pool_rows_),
-            out_cols_(channel_cols_ / pool_cols_)
-        {}
+                   int32_t pooling_width_, int32_t pooling_height_);
 
         virtual void initialize(const Scalar& mu, const Scalar& sigma, RandomPCG32_128& random) override;
 
@@ -856,7 +848,7 @@ template<class Activation>
             for (; loc_data < loc_end; loc_data++, z_data++)
             {
                 int32_t offset = *loc_data;
-                *z_data = internal::find_block_max(src + offset, pool_rows_, pool_cols_,
+                *z_data = find_block_max(src + offset, pool_rows_, pool_cols_,
                                                    channel_rows_, *loc_data);
                 *loc_data += offset;
             }
@@ -875,7 +867,7 @@ template<class Activation>
         template<class Activation>
         void MaxPooling<Activation>::backward(const Matrix& prev_layer_data, const Matrix& next_layer_data)
         {
-            int32_t nobs = prev_layer_data.cols();
+            int32_t cols = prev_layer_data.cols();
             // After forward stage, z_ contains z = max_pooling(in)
             // Now we need to calculate d(L) / d(z) = [d(a) / d(z)] * [d(L) / d(a)]
             // d(L) / d(z) is computed in the next layer, contained in next_layer_data
@@ -885,7 +877,7 @@ template<class Activation>
             // d(L) / d(in_i) = sum_j{ [d(z_j) / d(in_i)] * [d(L) / d(z_j)] }
             // d(z_j) / d(in_i) = 1 if in_i is used to compute z_j and is the maximum
             //                  = 0 otherwise
-            din_.resize(this->m_in_size, nobs);
+            din_.resize(this->m_in_size, cols);
             din_.setZero();
             int32_t dLz_size = dLz.size();
             const Scalar* dLz_data = dLz.data();
@@ -967,6 +959,15 @@ metainfo.insert_or_assign("pooling_height" + istr, pool_rows_);
     virtual LayerType layer_type() const override;
     virtual ActivationType activation_type() const override;
     virtual void fill_meta_info(MetaInfo& metainfo, int32_t index) override;
+
+    const Vector& mean() const;
+    const Vector& rstd() const;
+private:
+    Scalar eps_;
+    Matrix a_;
+    Matrix din_;
+    Vector mean_;
+    Vector rstd_;
         };
         } // namespace mindnn
 #endif // INC_MINDNN_LAYER_H_
