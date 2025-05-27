@@ -31,7 +31,7 @@ namespace mindnn
     {
     }
 
-    void LayerNorm::initialize(Scalar mean, Scalar sigma, bool bias, RandomPCG32_128& random)
+    void LayerNorm::initialize(Scalar , Scalar , bool , RandomPCG32_128& )
     {
     }
 
@@ -80,36 +80,20 @@ namespace mindnn
             }
         }
         const Matrix& dnorm = next_layer_input;
-        for(int32_t i = 0; i < N; ++i) {
-            for(int32_t j=0; j<D; ++j){
-                norm(i,j) = (prev_layer_output(i,j) - mean_(i))*rstd_(i);
+        auto mean = mindnn::mean(dnorm.array() * norm.array());
+        auto dnorm_mean = mindnn::mean(dnorm);
+        for(int32_t i = 0; i < norm.cols(); ++i) {
+            for(int32_t j = 0; j < norm.rows(); ++j) {
+                din_(j, i) = dnorm(j, i) - dnorm_mean(j) - norm(j, i) * mean(j);
+                din_(j, i) *= rstd_(j);
             }
         }
-        auto mean = mindnn::mean(dnorm.array() * norm.array());
-        std::cout << "mean: " << mean << std::endl;
-        int32_t r0 = mean.rows();
-        int32_t c0 = mean.cols();
-        int32_t r1 = norm.rows();
-        int32_t c1 = norm.cols();
-        auto nmean = mean.transpose()*norm;
-        int32_t nr0 = nmean.rows();
-        int32_t nc0 = nmean.cols();
-        std::cout << "nmean: " << nmean << std::endl;
-        //auto mmean = dnorm * norm;
-        //int32_t r0 = mmean.rows();
-        //int32_t c0 = mmean.cols();
-        //for(int32_t i=0; i<N; ++i){
-        //    auto d = dnorm.row(i);
-        //    auto x0 = d*norm;
-        //    auto m = mindnn::mean(d) - norm*mindnn::mean(x0);
-        //    dx.row(i) = d - mindnn::mean(d) - norm*mindnn::mean(d*norm);
-        //    dx.row(i) *= rstd_;
-        //}
+        std::cout << din_ << std::endl;
     }
 
     const LayerNorm::Matrix& LayerNorm::backward() const
     {
-        return Matrix();
+        return din_;
     }
 
     void LayerNorm::update(Optimizer& optimizer)
@@ -121,7 +105,7 @@ namespace mindnn
         return std::vector<Scalar>();
     }
 
-    void LayerNorm::set_weights(const std::vector<Scalar>& parameters)
+    void LayerNorm::set_weights(const std::vector<Scalar>&)
     {
     }
 
@@ -137,6 +121,8 @@ namespace mindnn
 
     void LayerNorm::fill_meta_info(MetaInfo& metainfo, int32_t index)
     {
+        std::string istr = std::to_string(index);
+            metainfo.insert_or_assign("Layer" + istr, static_cast<int32_t>(layer_type()));
     }
 
     const LayerNorm::Vector& LayerNorm::mean() const

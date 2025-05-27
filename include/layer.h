@@ -33,7 +33,7 @@ public:
     using Matrix = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>;
     using MetaInfo = std::unordered_map<std::string, int32_t>;
 
-    Layer(int32_t in_size, int32_t out_size);
+    virtual ~Layer();
 
     int32_t in_size() const;
     int32_t out_size() const;
@@ -53,7 +53,7 @@ public:
     virtual void fill_meta_info(MetaInfo& metainfo, int32_t index) = 0;
 
 protected:
-    virtual ~Layer();
+    Layer(int32_t in_size, int32_t out_size);
 
     int32_t in_size_;
     int32_t out_size_;
@@ -65,6 +65,7 @@ template<class Activation>
 class Dense: public Layer
 {
 public:
+    using Matrix = Layer::Matrix;
     using ConstAlignedMapVec = Vector::ConstAlignedMapType;
     using AlignedMapVec = Vector::AlignedMapType;
 
@@ -143,7 +144,7 @@ void Dense<Activation>::forward(const Matrix& prev_layer_output)
 }
 
 template<class Activation>
-const Dense<Activation>::Matrix& Dense<Activation>::output() const
+const typename Dense<Activation>::Matrix& Dense<Activation>::output() const
 {
     return a_;
 }
@@ -168,7 +169,7 @@ void Dense<Activation>::backward(const Matrix& prev_layer_output, const Matrix& 
 }
 
 template<class Activation>
-const Dense<Activation>::Matrix& Dense<Activation>::backward() const
+const typename Dense<Activation>::Matrix& Dense<Activation>::backward() const
 {
     return din_;
 }
@@ -238,6 +239,7 @@ template<class Activation>
 class Convolutional: public Layer
 {
 public:
+    using Matrix = Layer::Matrix;
     using ConstAlignedMapVec = Vector::ConstAlignedMapType;
     using ConstAlignedMapMat = Matrix::ConstAlignedMapType;
     using AlignedMapVec = Vector::AlignedMapType;
@@ -605,7 +607,7 @@ void Convolutional<Activation>::forward(const Matrix& prev_layer_output)
 }
 
 template<class Activation>
-const Convolutional<Activation>::Matrix& Convolutional<Activation>::output() const
+const typename Convolutional<Activation>::Matrix& Convolutional<Activation>::output() const
 {
     return a_;
 }
@@ -655,7 +657,7 @@ void Convolutional<Activation>::backward(const Matrix& prev_layer_output, const 
 }
 
 template<class Activation>
-const Convolutional<Activation>::Matrix& Convolutional<Activation>::backward() const
+const typename Convolutional<Activation>::Matrix& Convolutional<Activation>::backward() const
 {
     return din_;
 }
@@ -739,6 +741,7 @@ template<class Activation>
 class MaxPooling: public Layer
 {
     private:
+        using Matrix = Layer::Matrix;
         using IntMatrix = Eigen::MatrixXi;
 
     public:
@@ -859,7 +862,7 @@ template<class Activation>
         }
 
         template<class Activation>
-        const MaxPooling<Activation>::Matrix& MaxPooling<Activation>::output() const
+        const typename MaxPooling<Activation>::Matrix& MaxPooling<Activation>::output() const
         {
             return a_;
         }
@@ -891,7 +894,7 @@ template<class Activation>
         }
 
         template<class Activation>
-        const MaxPooling<Activation>::Matrix& MaxPooling<Activation>::backward() const
+        const typename MaxPooling<Activation>::Matrix& MaxPooling<Activation>::backward() const
         {
             return din_;
         }
@@ -944,6 +947,7 @@ metainfo.insert_or_assign("pooling_height" + istr, pool_rows_);
         class LayerNorm : public Layer
         {
         public:
+            using Matrix = Layer::Matrix;
             LayerNorm();
 
     virtual void initialize(Scalar mean, Scalar sigma, bool bias, RandomPCG32_128& random) override;

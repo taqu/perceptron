@@ -59,6 +59,8 @@ set(HEADERS
     "${HEADER_DIR}/layer.h"
     "${HEADER_DIR}/activation.h"
     "${HEADER_DIR}/optimizer.h"
+    "${HEADER_DIR}/output.h"
+    "${HEADER_DIR}/network.h"
     "${HEADER_DIR}/utils.h")
 
 set(SOURCES
@@ -67,6 +69,8 @@ set(SOURCES
     "${SOURCE_DIR}/layer.cpp"
     "${SOURCE_DIR}/activation.cpp"
     "${SOURCE_DIR}/optimizer.cpp"
+    "${SOURCE_DIR}/output.cpp"
+    "${SOURCE_DIR}/network.cpp"
     "${SOURCE_DIR}/utils.cpp")
 
 source_group("include" FILES ${HEADERS})
